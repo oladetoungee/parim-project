@@ -146,6 +146,21 @@
   outline-offset: 2px;
 }
 
+/*
+ * Shift card ticket: two 14px half-circle notches cut into the side edges at
+ * the tear line, so the page shows through. --tear is the tear line's distance
+ * from the top of the border box. The notch strokes are separate elements.
+ */
+@utility ticket-mask {
+  --tear: 55px;
+  -webkit-mask:
+    radial-gradient(circle at 0 var(--tear), #0000 7px, #000 7.5px) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% var(--tear), #0000 7px, #000 7.5px) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle at 0 var(--tear), #0000 7px, #000 7.5px) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% var(--tear), #0000 7px, #000 7.5px) right / 51% 100% no-repeat;
+}
+
 /* ---------- Keyframes. Only transform and opacity. ---------- */
 
 @keyframes fade-in {

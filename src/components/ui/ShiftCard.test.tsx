@@ -25,7 +25,9 @@ describe("ShiftCard", () => {
 
   it("shows role, time with tabular figures and filled out of needed", () => {
     render(<ShiftCard {...base} status="partly-filled" filled={2} location="Gate A" />);
-    const card = screen.getByRole("button", { name: /Steward, Gate A, 10:00 to 16:00, 2 of 4 filled/ });
+    const card = screen.getByRole("button", {
+      name: "Steward, Gate A, 10:00 to 16:00, 2 of 4 filled, 2 places open, Short",
+    });
     expect(card).toHaveTextContent("2 of 4");
     expect(screen.getByText("10:00–16:00")).toHaveClass("tabular");
   });
@@ -41,6 +43,34 @@ describe("ShiftCard", () => {
     const card = screen.getByRole("button");
     expect(card).toHaveAttribute("data-state", "drop-invalid");
     expect(card).toHaveAccessibleDescription(reason);
+  });
+
+  it("draws one place per slot: faces for filled, dashed circles for open", () => {
+    const people = [
+      { id: "a", name: "Ana Tamm" },
+      { id: "b", name: "Kofi Mensah" },
+    ];
+    const { container } = render(<ShiftCard {...base} status="partly-filled" filled={2} people={people} />);
+    expect(screen.getByText("AT")).toBeInTheDocument();
+    expect(screen.getByText("KM")).toBeInTheDocument();
+    expect(container.querySelectorAll(".border-dashed.rounded-full.size-6")).toHaveLength(2);
+  });
+
+  it("shows +N past five places, and +N past three for narrow cards", () => {
+    render(<ShiftCard {...base} needed={8} status="open" filled={0} />);
+    expect(screen.getByText("+3")).toBeInTheDocument();
+    expect(screen.getByText("+5")).toBeInTheDocument();
+  });
+
+  it("rings the clashing person in conflict colour and names them", () => {
+    const people = [
+      { id: "a", name: "Ana Tamm" },
+      { id: "b", name: "Kofi Mensah" },
+    ];
+    render(<ShiftCard {...base} status="conflict" filled={2} people={people} clashStaffIds={["b"]} />);
+    expect(screen.getByText("KM")).toHaveAttribute("data-clash", "true");
+    expect(screen.getByText("AT")).not.toHaveAttribute("data-clash");
+    expect(screen.getByRole("button")).toHaveAccessibleName(expect.stringContaining("clash: Kofi Mensah"));
   });
 
   it("marks selected and valid drop states", () => {

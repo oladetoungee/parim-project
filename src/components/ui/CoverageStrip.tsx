@@ -39,6 +39,8 @@ export function describeHour({ hour, needed, assigned }: HourCoverage) {
  * need; inside it the assigned part sits at the bottom in data/assigned and
  * the shortfall shows in status/short above it. Covered hours carry no colour.
  * Each bar is a button: one tab stop for the strip, arrow keys between hours.
+ * Keyboard focus draws the standard accent ring around the bar; the active
+ * (hovered or focused) hour also gets a 2px ink border.
  */
 export function CoverageStrip({
   hours,
@@ -114,7 +116,7 @@ export function CoverageStrip({
               }}
               onBlur={() => setActive(null)}
               onMouseEnter={() => setActive(h.hour)}
-              className="group/bar relative flex min-w-0 flex-col items-stretch outline-none"
+              className="group/bar relative flex min-w-0 flex-col items-stretch focus:outline-none focus-visible:outline-none"
             >
               {isActive ? (
                 <span
@@ -143,17 +145,22 @@ export function CoverageStrip({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "relative block overflow-hidden border border-need-outline",
+                    "relative block border border-need-outline",
+                    "group-focus-visible/bar:outline-2 group-focus-visible/bar:outline-offset-2 group-focus-visible/bar:outline-ring",
                     short > 0 ? "bg-short" : "bg-transparent",
-                    isActive && "outline-2 outline-ink",
                     h.needed === 0 && "border-hairline",
                   )}
                   style={{ height: Math.max(needHeight, 2) }}
                 >
-                  <span
-                    className="absolute inset-0 origin-bottom bg-assigned transition-transform duration-base ease-standard motion-reduce:transition-none"
-                    style={{ transform: `scaleY(${ratio})` }}
-                  />
+                  <span className="absolute inset-0 overflow-hidden">
+                    <span
+                      className="absolute inset-0 origin-bottom bg-assigned transition-transform duration-base ease-standard motion-reduce:transition-none"
+                      style={{ transform: `scaleY(${ratio})` }}
+                    />
+                  </span>
+                  {isActive ? (
+                    <span className="pointer-events-none absolute -inset-px border-2 border-ink" data-active="true" />
+                  ) : null}
                 </span>
               </span>
               <span

@@ -1,5 +1,5 @@
 /*
- * Shiftline design tokens.
+ * ParimShift design tokens.
  * Source of truth: tokens/tokens.json (same names as the Figma variables).
  * Light values on :root, dark values on [data-theme="dark"].
  *
@@ -22,7 +22,7 @@
   --ink-raised: #1a1a1f;
   --ink-hairline: #2b2b31;
 
-  --ink-subtle: #76736d;
+  --ink-subtle: #8c8983;
   --ink-outline: #6e6c67;
   --ink-assigned: #3a3a42;
   --ink-muted: #a3a09a;
@@ -130,11 +130,11 @@
   --bg-scrim: rgb(0 0 0 / 0.56);
 
   --border-hairline: var(--ink-hairline); /* 1.34 on canvas: separators only */
-  --border-strong: var(--ink-subtle); /* 3.99 on canvas: control boundaries */
+  --border-strong: var(--ink-subtle); /* 5.40 on canvas: control boundaries */
 
   --text-primary: var(--ink-text); /* 15.58 on canvas, 14.33 on raised */
   --text-muted: var(--ink-muted); /* 7.23 on canvas, 6.65 on raised */
-  --text-subtle: var(--ink-subtle); /* 3.99 on canvas: placeholder and disabled only */
+  --text-subtle: var(--ink-subtle); /* 5.40 on canvas, 4.97 on raised: placeholder and disabled */
 
   --accent-default: var(--cobalt-300); /* 6.70 on canvas, 6.16 on raised */
   --accent-hover: var(--cobalt-200); /* 8.72 on canvas; accent/on on it 8.72 */

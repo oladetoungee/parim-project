@@ -62,7 +62,8 @@ function Gallery() {
       <header className="flex flex-wrap items-end justify-between gap-6 pb-8">
         <div className="flex flex-col gap-2">
           <h1 className="font-display text-32 leading-9 tracking-[-0.02em] text-ink">
-            <span className="font-extrabold">Shiftline</span> <span className="font-light">components</span>
+            <span className="font-bold">Parim</span>
+            <span className="font-light">Shift</span> <span className="font-light text-muted">components</span>
           </h1>
           <p className="max-w-xl text-14 text-muted">
             Every component in every state, for review. Built from the tokens in tokens/tokens.json.
@@ -182,12 +183,12 @@ function Gallery() {
         </Row>
       </Section>
 
-      <Section title="Shift card" note="Status, then interaction states. The 2px edge is the only colour strip.">
+      <Section title="Shift card" note="A ticket: head, tear line, then one place per slot. Status, then interaction states, then overflow at 240 and 176 wide.">
         <Row>
           <ShiftCard role="Steward" location="Gate A" start="10:00" end="16:00" filled={0} needed={4} status="open" />
           <ShiftCard role="Steward" location="Gate A" start="10:00" end="16:00" filled={2} needed={4} status="partly-filled" people={people.slice(0, 2)} />
           <ShiftCard role="Bar staff" location="Bar 1" start="12:00" end="20:00" filled={5} needed={5} status="filled" people={people} />
-          <ShiftCard role="Security" location="Car park" start="18:00" end="02:00" filled={2} needed={3} status="conflict" people={people.slice(2, 4)} />
+          <ShiftCard role="Security" location="Car park" start="18:00" end="02:00" filled={2} needed={3} status="conflict" people={people.slice(2, 4)} clashStaffIds={["4"]} />
           <ShiftCard role="Steward" location="Gate B" start="07:00" end="12:00" filled={0} needed={2} status="draft" />
         </Row>
         <Row>
@@ -219,6 +220,10 @@ function Gallery() {
             onClick={() => setShake((n) => n + 1)}
           />
           <ShiftCardSkeleton />
+        </Row>
+        <Row>
+          <ShiftCard role="Bar staff" location="Bar 2" start="11:00" end="23:00" filled={3} needed={8} status="partly-filled" people={people.slice(0, 3)} />
+          <ShiftCard role="Steward" location="Gate A" start="10:00" end="16:00" filled={2} needed={6} status="partly-filled" people={people.slice(0, 2)} className="w-44" />
         </Row>
         <p className="text-12 text-muted">Click the fourth card in the second row to play the conflict shake.</p>
       </Section>

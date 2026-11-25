@@ -15,7 +15,7 @@ const interTight = Inter_Tight({
 });
 
 export const metadata: Metadata = {
-  title: "Shiftline",
+  title: "ParimShift",
   description: "An event shift board for staffing a race day.",
 };
 
