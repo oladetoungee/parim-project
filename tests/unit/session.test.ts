@@ -1,0 +1,39 @@
+import { beforeAll, describe, expect, it } from "vitest";
+import { decodeSession, encodeSession, getSession, requireManager } from "@/server/session";
+
+beforeAll(() => {
+  process.env.SESSION_SECRET = "unit-test-secret-at-least-16";
+});
+
+function requestWith(cookie?: string) {
+  return new Request("http://localhost/api/x", { headers: cookie ? { cookie } : {} });
+}
+
+describe("session cookie", () => {
+  it("round trips a worker session", () => {
+    expect(decodeSession(encodeSession({ role: "worker", staffId: 12 }))).toEqual({ role: "worker", staffId: 12 });
+  });
+
+  it("rejects a tampered payload", () => {
+    const [, signature] = encodeSession({ role: "worker", staffId: 12 }).split(".");
+    const forged = Buffer.from(JSON.stringify({ role: "manager" })).toString("base64url");
+    expect(decodeSession(`${forged}.${signature}`)).toBeNull();
+  });
+
+  it("rejects a cookie signed with another secret", () => {
+    const token = encodeSession({ role: "manager" });
+    process.env.SESSION_SECRET = "a-different-secret-entirely";
+    expect(decodeSession(token)).toBeNull();
+    process.env.SESSION_SECRET = "unit-test-secret-at-least-16";
+  });
+
+  it("treats no cookie as the manager and a bad cookie as 401", () => {
+    expect(getSession(requestWith())).toEqual({ role: "manager" });
+    expect(() => getSession(requestWith("shiftline_session=nope"))).toThrowError(expect.objectContaining({ status: 401 }));
+  });
+
+  it("gives workers 403 on manager routes", () => {
+    const cookie = `shiftline_session=${encodeSession({ role: "worker", staffId: 3 })}`;
+    expect(() => requireManager(requestWith(cookie))).toThrowError(expect.objectContaining({ status: 403, code: "forbidden" }));
+  });
+});
