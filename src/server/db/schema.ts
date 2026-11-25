@@ -19,7 +19,8 @@ import {
 // "YYYY-MM-DD" strings, read in the event's timezone.
 
 const createdAt = () =>
-  datetime("created_at", { mode: "date" })
+  // Millisecond precision: retries compare created_at with when the request began.
+  datetime("created_at", { mode: "date", fsp: 3 })
     .notNull()
     .$defaultFn(() => new Date());
 

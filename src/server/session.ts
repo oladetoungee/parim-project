@@ -3,10 +3,11 @@
 //
 // Cookie value: base64url(JSON payload) + "." + base64url(HMAC-SHA256(payload, SESSION_SECRET))
 //
-// A request with no cookie is treated as the manager. The switch has no
-// password, so anyone can become the manager anyway; defaulting saves the first
-// page load a round trip. A cookie that is present but fails verification is
-// rejected with 401 rather than quietly downgraded.
+// Every API route, reads included, needs the cookie: no cookie is 401
+// no_session, a cookie that fails verification is 401 invalid_session. The
+// first page load gets a manager cookie from src/proxy.ts, so the board works
+// straight away. The cookie is SameSite=Lax, so a cross-site POST arrives
+// without it and is refused.
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { HttpError } from "./http";
@@ -17,7 +18,8 @@ export const SESSION_COOKIE = "shiftline_session";
 /** The seeded worker the switch logs in as, unless a staffId is given. */
 export const DEMO_WORKER_EMAIL = "ana.tamm@example.com";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
-const DEFAULT_SESSION: Session = { role: "manager" };
+/** What src/proxy.ts hands out on the first page load. */
+export const DEFAULT_SESSION: Session = { role: "manager" };
 
 function secret() {
   const value = process.env.SESSION_SECRET;
@@ -63,11 +65,18 @@ function readCookie(request: Request, name: string): string | undefined {
   return undefined;
 }
 
-export function getSession(request: Request): Session {
+/** The session, or null when there is no cookie. A bad cookie is 401. */
+export function readSession(request: Request): Session | null {
   const token = readCookie(request, SESSION_COOKIE);
-  if (token === undefined) return DEFAULT_SESSION;
+  if (token === undefined) return null;
   const session = decodeSession(token);
   if (!session) throw new HttpError(401, "invalid_session", "Your session is not valid. Switch role again to start a new one.");
+  return session;
+}
+
+export function getSession(request: Request): Session {
+  const session = readSession(request);
+  if (!session) throw new HttpError(401, "no_session", "No session. Reload the page or switch role to start one.");
   return session;
 }
 
@@ -88,16 +97,22 @@ export function actorOf(session: Session): string {
   return session.role === "manager" ? "manager" : `worker:${session.staffId}`;
 }
 
+/** Cookie attributes, shared by POST /api/session and src/proxy.ts. */
+export function sessionCookieOptions() {
+  return {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: MAX_AGE_SECONDS,
+  };
+}
+
 /** The Set-Cookie header value for a session. */
 export function sessionSetCookie(session: Session): string {
-  const parts = [
-    `${SESSION_COOKIE}=${encodeSession(session)}`,
-    "Path=/",
-    "HttpOnly",
-    "SameSite=Lax",
-    `Max-Age=${MAX_AGE_SECONDS}`,
-  ];
-  if (process.env.NODE_ENV === "production") parts.push("Secure");
+  const options = sessionCookieOptions();
+  const parts = [`${SESSION_COOKIE}=${encodeSession(session)}`, `Path=${options.path}`, "HttpOnly", "SameSite=Lax", `Max-Age=${options.maxAge}`];
+  if (options.secure) parts.push("Secure");
   return parts.join("; ");
 }
 

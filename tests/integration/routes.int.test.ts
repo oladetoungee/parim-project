@@ -76,6 +76,14 @@ describe("GET /api/staff", () => {
     expect(statuses.filter((s) => s === "expiring")).toHaveLength(3);
   });
 
+  it("returns 50 people by default and honours ?limit", async () => {
+    const all = await call(staffList, { path: `/api/staff?eventId=${eventId}` });
+    expect(all.body.items).toHaveLength(50);
+    const five = await call(staffList, { path: `/api/staff?eventId=${eventId}&limit=5` });
+    expect(five.body.items).toHaveLength(5);
+    expect((await call(staffList, { path: `/api/staff?eventId=${eventId}&limit=500` })).status).toBe(422);
+  });
+
   it("is manager only, and validates the query", async () => {
     expect((await call(staffList, { path: `/api/staff?eventId=${eventId}`, session: await demoWorker() })).status).toBe(403);
     const bad = await call(staffList, { path: "/api/staff" });
@@ -138,6 +146,52 @@ describe("PATCH /api/shifts/:id", () => {
     expect(res.body.error.code).toBe("slots_below_filled");
   });
 
+  it("blocks a time change that makes someone on the shift overlap another shift", async () => {
+    const id = String(await createShift({ locationName: "Gate A", start: "10:00", end: "12:00" }));
+    const elsewhere = await createShift({ locationName: "Gate B", start: "13:00", end: "15:00" });
+    const person = await createStaff("steward", "Jaan Oja");
+    await placeDirectly(Number(id), person.id);
+    await placeDirectly(elsewhere, person.id);
+
+    const res = await call(patchShift, { method: "PATCH", path: `/api/shifts/${id}`, params: { id }, body: { version: 1, startTime: "12:00", endTime: "14:00" } });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("rule_blocked");
+    expect(res.body.error.message).toBe("Jaan Oja is already on Gate B, 13:00 to 15:00.");
+    expect(res.body.error.details.people).toEqual([
+      { staffId: person.id, name: "Jaan Oja", breaks: [{ code: "overlap", severity: "block", message: "Jaan Oja is already on Gate B, 13:00 to 15:00." }] },
+    ]);
+  });
+
+  it("blocks a role change to security when someone on the shift has no SIA licence", async () => {
+    const id = String(await createShift({ roleName: "steward" }));
+    const person = await createStaff("steward", "Megan Lloyd");
+    await placeDirectly(Number(id), person.id);
+
+    const res = await call(patchShift, { method: "PATCH", path: `/api/shifts/${id}`, params: { id }, body: { version: 1, roleId: 3 } });
+
+    expect(res.status).toBe(409);
+    const codes = res.body.error.details.people[0].breaks.map((b: { code: string }) => b.code);
+    expect(codes).toEqual(expect.arrayContaining(["role_mismatch", "sia_missing"]));
+  });
+
+  it("needs a reason when new times cut someone's rest, then saves it", async () => {
+    const id = String(await createShift({ start: "12:00", end: "16:00" }));
+    const late = await createShift({ date: "2026-12-04", start: "18:00", end: "23:30" });
+    const person = await createStaff("steward");
+    await placeDirectly(Number(id), person.id);
+    await placeDirectly(late, person.id);
+
+    const body = { version: 1, startTime: "07:00", endTime: "11:00" };
+    const noReason = await call(patchShift, { method: "PATCH", path: `/api/shifts/${id}`, params: { id }, body });
+    expect(noReason.status).toBe(409);
+    expect(noReason.body.error.code).toBe("needs_override");
+
+    const withReason = await call(patchShift, { method: "PATCH", path: `/api/shifts/${id}`, params: { id }, body: { ...body, overrideReason: "Gates open early" } });
+    expect(withReason.status).toBe(200);
+    expect(withReason.body.shift.version).toBe(2);
+  });
+
   it("returns 422 for half a time range and 403 for a worker", async () => {
     const id = String(await createShift());
     const half = await call(patchShift, { method: "PATCH", path: `/api/shifts/${id}`, params: { id }, body: { version: 1, startTime: "09:00" } });
@@ -163,7 +217,7 @@ describe("shift requests", () => {
     // Ana finishes at 13:00, so 18:00 leaves 5 hours of rest: the manager has to give a reason.
     expect(requested.body.notes.map((n: { code: string }) => n.code)).toEqual(["rest_too_short"]);
     const id = String(requested.body.request.id);
-    const noReason = await call(approve, { method: "POST", path: `/api/shift-requests/${id}/approve`, params: { id } });
+    const noReason = await call(approve, { method: "POST", path: `/api/shift-requests/${id}/approve`, params: { id }, body: {} });
     expect(noReason.status).toBe(409);
     expect(noReason.body.error.code).toBe("needs_override");
 
@@ -172,7 +226,7 @@ describe("shift requests", () => {
     expect(approved.body.request.status).toBe("approved");
     expect(approved.body.assignment).toMatchObject({ shiftId, staffId: worker.staffId });
 
-    const twice = await call(approve, { method: "POST", path: `/api/shift-requests/${id}/approve`, params: { id } });
+    const twice = await call(approve, { method: "POST", path: `/api/shift-requests/${id}/approve`, params: { id }, body: {} });
     expect(twice.status).toBe(409);
     expect(twice.body.error.code).toBe("request_not_pending");
   });
@@ -184,10 +238,44 @@ describe("shift requests", () => {
     expect(res.body.error.message).toBe("Ana Tamm is already on Gate A, 07:00 to 13:00.");
   });
 
+  it("never shows a worker who took a full shift", async () => {
+    const shiftId = await createShift({ slots: 1 });
+    await placeDirectly(shiftId, (await createStaff("steward", "Freya Campbell")).id);
+
+    const res = await call(requestShift, { method: "POST", path: "/api/shift-requests", body: { shiftId }, session: await demoWorker() });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("shift_full");
+    expect(res.body.error.details).not.toHaveProperty("takenBy");
+    expect(JSON.stringify(res.body)).not.toContain("Freya");
+  });
+
+  it("tells a worker who is already on the shift", async () => {
+    const worker = await demoWorker();
+    const shiftId = await createShift({ start: "18:00", end: "22:00" });
+    await placeDirectly(shiftId, worker.staffId);
+    const res = await call(requestShift, { method: "POST", path: "/api/shift-requests", body: { shiftId }, session: worker });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("already_assigned");
+  });
+
+  it("returns shift_full when approving a request for a shift that has since filled", async () => {
+    const shiftId = await createShift({ slots: 1, start: "19:00", end: "23:00" });
+    const requester = await createStaff("steward");
+    const requested = await call(requestShift, { method: "POST", path: "/api/shift-requests", body: { shiftId }, session: { role: "worker", staffId: requester.id } });
+    expect(requested.status).toBe(201);
+    await placeDirectly(shiftId, (await createStaff("steward")).id);
+
+    const id = String(requested.body.request.id);
+    const res = await call(approve, { method: "POST", path: `/api/shift-requests/${id}/approve`, params: { id }, body: {} });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("shift_full");
+  });
+
   it("is worker only to request, manager only to approve", async () => {
     const shiftId = await createShift();
     expect((await call(requestShift, { method: "POST", path: "/api/shift-requests", body: { shiftId }, session: manager })).status).toBe(403);
-    expect((await call(approve, { method: "POST", path: "/api/shift-requests/1/approve", params: { id: "1" }, session: await demoWorker() })).status).toBe(403);
+    expect((await call(approve, { method: "POST", path: "/api/shift-requests/1/approve", params: { id: "1" }, body: {}, session: await demoWorker() })).status).toBe(403);
   });
 });
 

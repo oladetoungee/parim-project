@@ -32,6 +32,7 @@ export const staffQuerySchema = z.object({
   eventId: idSchema,
   q: z.string().trim().max(80).optional(),
   role: idSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
 export const activityQuerySchema = z.object({
@@ -57,6 +58,8 @@ export const updateShiftSchema = z
     endTime: time.optional(),
     slots: z.number().int().min(1).max(50).optional(),
     notes: z.string().trim().max(1000).nullable().optional(),
+    // Needed when new times or a new role give people on the shift a warning.
+    overrideReason,
   })
   .refine((v) => (v.startTime === undefined) === (v.endTime === undefined), {
     message: "Send startTime and endTime together.",

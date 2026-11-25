@@ -1,21 +1,46 @@
 import { TEST_DATABASE_URL } from "./env";
 import { randomUUID } from "node:crypto";
 import { and, count, eq } from "drizzle-orm";
-import { migrateDatabase } from "../../scripts/migrate";
-import { SEED, seedDatabase } from "../../scripts/seed";
+import { connectWithRetry, migrateConnection } from "../../scripts/migrate";
+import { SEED, seedConnection } from "../../scripts/seed";
 import { resolveShiftTimes } from "@/lib/time";
-import { getDb } from "@/server/db/client";
+import { getDb, isConnectionDropped, runTransaction } from "@/server/db/client";
 import { assignment, auditLog, licence, location, role, shift, staff } from "@/server/db/schema";
 import { DEMO_WORKER_EMAIL, type Session, sessionCookieHeader } from "@/server/session";
 
 export { SEED };
 
+/**
+ * Migrates and reseeds the test database over one connection. Truncate plus
+ * insert is safe to repeat, so a dropped connection starts it again on a new one.
+ */
+// No parameters: vitest parses the arguments of a function passed straight to beforeAll.
 export async function resetDatabase() {
-  await migrateDatabase(TEST_DATABASE_URL);
-  await seedDatabase(TEST_DATABASE_URL);
+  const attempts = 3;
+  for (let attempt = 1; ; attempt++) {
+    const connection = await connectWithRetry(TEST_DATABASE_URL);
+    try {
+      await migrateConnection(connection);
+      await seedConnection(connection);
+      return;
+    } catch (error) {
+      if (attempt >= attempts || !isConnectionDropped(error)) throw error;
+    } finally {
+      connection.destroy();
+    }
+  }
 }
 
 export const manager: Session = { role: "manager" };
+
+/**
+ * Fixture writes go through runTransaction too, so a dropped connection to the
+ * remote test database is retried rather than failing the test. (Plain
+ * pool.query only retries SELECTs.)
+ */
+function write<T>(work: Parameters<typeof runTransaction<T>>[1]) {
+  return runTransaction(getDb(), work);
+}
 
 type CallOptions = {
   method?: string;
@@ -32,7 +57,7 @@ type RouteHandler = (request: Request, context: { params: Promise<Record<string,
 export async function call(handler: unknown, options: CallOptions) {
   const headers: Record<string, string> = { ...options.headers };
   if (options.session !== null) headers.cookie = sessionCookieHeader(options.session ?? manager);
-  if (options.body !== undefined) headers["content-type"] = "application/json";
+  if (options.body !== undefined) headers["content-type"] ??= "application/json";
 
   const request = new Request(`http://localhost${options.path}`, {
     method: options.method ?? "GET",
@@ -55,35 +80,35 @@ export async function locationId(name: string) {
 
 /** A fresh person with no shifts, so tests don't depend on who the seed placed where. */
 export async function createStaff(roleName: string, name = `Test Person ${randomUUID().slice(0, 8)}`, siaExpiresOn?: string) {
-  const [{ id }] = await getDb()
-    .insert(staff)
-    .values({ name, roleId: await roleId(roleName), email: `${randomUUID()}@example.com`, weeklyHourLimit: 48 })
-    .$returningId();
-  if (siaExpiresOn) {
-    await getDb().insert(licence).values({ staffId: id, kind: "SIA", number: `SIA-TEST-${id}`, expiresOn: siaExpiresOn });
-  }
-  return { id, name };
+  const role = await roleId(roleName);
+  return write(async (tx) => {
+    const [{ id }] = await tx
+      .insert(staff)
+      .values({ name, roleId: role, email: `${randomUUID()}@example.com`, weeklyHourLimit: 48 })
+      .$returningId();
+    if (siaExpiresOn) {
+      await tx.insert(licence).values({ staffId: id, kind: "SIA", number: `SIA-TEST-${id}`, expiresOn: siaExpiresOn });
+    }
+    return { id, name };
+  });
 }
 
 /** A fresh shift on race day. Times are local to the event. */
 export async function createShift(options: { roleName?: string; locationName?: string; start?: string; end?: string; slots?: number; date?: string } = {}) {
   const { roleName = "steward", locationName = "Gate A", start = "14:00", end = "16:00", slots = 2, date = SEED.date } = options;
-  const [{ id }] = await getDb()
-    .insert(shift)
-    .values({
-      eventId: SEED.eventId,
-      locationId: await locationId(locationName),
-      roleId: await roleId(roleName),
-      ...resolveShiftTimes(date, start, end, SEED.timezone),
-      slots,
-    })
-    .$returningId();
-  return id;
+  const values = {
+    eventId: SEED.eventId,
+    locationId: await locationId(locationName),
+    roleId: await roleId(roleName),
+    ...resolveShiftTimes(date, start, end, SEED.timezone),
+    slots,
+  };
+  return write(async (tx) => (await tx.insert(shift).values(values).$returningId())[0].id);
 }
 
 /** Puts someone on a shift directly, skipping the API. */
 export async function placeDirectly(shiftId: number, staffId: number) {
-  await getDb().insert(assignment).values({ shiftId, staffId, createdBy: "test" });
+  await write((tx) => tx.insert(assignment).values({ shiftId, staffId, createdBy: "test" }));
 }
 
 export async function assignmentCount(shiftId: number) {

@@ -11,8 +11,14 @@ type Cached = { pool: mysql.Pool; db: Db };
 // stops each reload from opening a new set of connections.
 const globalForDb = globalThis as unknown as { shiftlineDb?: Cached };
 
+// How long a statement waits for a row lock before failing (MySQL's default is 50s).
+// Kept well under the 60s idempotency claim, so a request stuck behind a lock
+// fails and releases its key instead of outliving it. The route turns the
+// error into 503 busy.
+const LOCK_WAIT_TIMEOUT_SECONDS = 5;
+
 export function createPool(url: string) {
-  return retryReadsOnDroppedConnection(mysql.createPool({
+  const pool = mysql.createPool({
     uri: url,
     connectionLimit: 10,
     // Railway's TCP proxy drops idle connections. Keep-alive plus a short idle
@@ -23,22 +29,32 @@ export function createPool(url: string) {
     idleTimeout: 20_000,
     // Belt and braces: Drizzle already maps datetimes as UTC, this keeps raw queries UTC too.
     timezone: "Z",
-  }));
+  });
+  // Runs once per new connection, queued ahead of anything else sent on it.
+  pool.on("connection", (connection) => {
+    connection.query(`SET SESSION innodb_lock_wait_timeout = ${LOCK_WAIT_TIMEOUT_SECONDS}`);
+  });
+  return retrySelectsOnDroppedConnection(pool);
+}
+
+function isSelect(args: unknown[]): boolean {
+  const first = args[0];
+  const text = typeof first === "string" ? first : (first as { sql?: string } | undefined)?.sql;
+  return typeof text === "string" && /^\s*select\b/i.test(text);
 }
 
 /**
- * Retries a query once when its connection was dropped. Drizzle sends
- * pool.query only outside transactions (a transaction runs on a connection it
- * checked out), and outside transactions the app only reads, so a retry can't
- * repeat a write. Writes get their own retry in runTransaction.
+ * Retries a SELECT once when its connection was dropped. Only pool.query is
+ * wrapped, which Drizzle uses outside transactions; anything that isn't a
+ * SELECT fails as it would have. Writes get their retry in runTransaction.
  */
-function retryReadsOnDroppedConnection(pool: mysql.Pool): mysql.Pool {
+function retrySelectsOnDroppedConnection(pool: mysql.Pool): mysql.Pool {
   const query = pool.query.bind(pool) as (...args: unknown[]) => Promise<unknown>;
   const retrying = async (...args: unknown[]) => {
     try {
       return await query(...args);
     } catch (error) {
-      if (!isConnectionDropped(error)) throw error;
+      if (!isSelect(args) || !isConnectionDropped(error)) throw error;
       return query(...args);
     }
   };
@@ -81,24 +97,34 @@ export function isRetryableError(error: unknown): boolean {
   return isConnectionDropped(error) || someCause(error, (e) => e.code === "ER_LOCK_DEADLOCK");
 }
 
+/** Passed to each attempt of a transaction. */
+export type Attempt = {
+  /** True on attempts after the first: the previous one may have committed before its reply was lost. */
+  isRetry: boolean;
+  /** When the first attempt started, by this server's clock. */
+  startedAt: Date;
+};
+
 /**
  * Runs a READ COMMITTED transaction, retrying up to twice on a deadlock or a
- * dropped connection. MySQL rolls back the failed attempt, so a retry starts
- * clean. Even if a commit landed and only its reply was lost, the retry can't
- * write twice: the unique keys, the "already assigned" check and the version
- * check turn it into a 409.
+ * dropped connection. A failed attempt is rolled back, so a retry starts clean,
+ * with one exception: the COMMIT itself can succeed and only its reply get
+ * lost. Callers handle that with `attempt.isRetry`: they look for their own
+ * effect (a row they would have written since `startedAt`) and report success
+ * instead of a misleading 409.
  *
  * READ COMMITTED because callers lock a row and then read others: each read
  * then sees what the previous lock holder committed, where REPEATABLE READ
  * could keep an older snapshot.
  */
-export async function runTransaction<T>(db: Db, work: (tx: Tx) => Promise<T>, attempts = 3): Promise<T> {
-  for (let attempt = 1; ; attempt++) {
+export async function runTransaction<T>(db: Db, work: (tx: Tx, attempt: Attempt) => Promise<T>, attempts = 3): Promise<T> {
+  const startedAt = new Date();
+  for (let n = 1; ; n++) {
     try {
-      return await db.transaction(work, { isolationLevel: "read committed" });
+      return await db.transaction((tx) => work(tx, { isRetry: n > 1, startedAt }), { isolationLevel: "read committed" });
     } catch (error) {
-      if (attempt >= attempts || !isRetryableError(error)) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+      if (n >= attempts || !isRetryableError(error)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 100 * n));
     }
   }
 }

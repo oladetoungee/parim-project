@@ -178,8 +178,8 @@ function escapeLike(value: string) {
   return value.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
 
-/** Staff for the panel: search by name, filter by role, with licence status and hours in the event's week. */
-export async function searchStaff(db: Db, query: { eventId: number; q?: string; role?: number }): Promise<StaffListItem[] | null> {
+/** Staff for the panel: search by name, filter by role, with licence status and hours in the event's week. Up to `limit` rows (default 50). */
+export async function searchStaff(db: Db, query: { eventId: number; q?: string; role?: number; limit: number }): Promise<StaffListItem[] | null> {
   const ev = await getEvent(db, query.eventId);
   if (!ev) return null;
 
@@ -192,7 +192,8 @@ export async function searchStaff(db: Db, query: { eventId: number; q?: string; 
     .from(staff)
     .innerJoin(role, eq(role.id, staff.roleId))
     .where(filters.length ? and(...filters) : undefined)
-    .orderBy(asc(staff.name));
+    .orderBy(asc(staff.name), asc(staff.id))
+    .limit(query.limit);
   if (people.length === 0) return [];
 
   // The event's Monday to Sunday week, plus a day either side for rest gaps.

@@ -2,7 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createShift, createStaff, call, assignmentCount, auditRows, demoWorker, placeDirectly, resetDatabase, SEED } from "./helpers";
 import { POST as assign } from "@/app/api/assignments/route";
 import { DELETE as unassign } from "@/app/api/assignments/[id]/route";
-import { closeDb } from "@/server/db/client";
+import { sql } from "drizzle-orm";
+import { assignInTransaction } from "@/server/assign";
+import { closeDb, getDb, runTransaction } from "@/server/db/client";
 
 beforeAll(resetDatabase);
 afterAll(closeDb);
@@ -112,6 +114,21 @@ describe("POST /api/assignments", () => {
     expect(res.body.error.code).toBe("invalid_session");
   });
 
+  it("returns 401 no_session without a cookie, so a cross-site post can't write", async () => {
+    const shiftId = await createShift();
+    const person = await createStaff("steward");
+    const res = await postAssignment({ shiftId, staffId: person.id }, null);
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("no_session");
+    expect(await assignmentCount(shiftId)).toBe(0);
+  });
+
+  it("returns 415 unless the body is sent as JSON", async () => {
+    const res = await call(assign, { method: "POST", path: "/api/assignments", body: { shiftId: 1, staffId: 1 }, headers: { "content-type": "text/plain" } });
+    expect(res.status).toBe(415);
+    expect(res.body.error.code).toBe("unsupported_media_type");
+  });
+
   it("returns 422 with details for a bad body", async () => {
     const res = await postAssignment({ shiftId: "abc" });
 
@@ -151,5 +168,35 @@ describe("DELETE /api/assignments/:id", () => {
   it("returns 403 for a worker", async () => {
     const res = await call(unassign, { method: "DELETE", path: "/api/assignments/1", params: { id: "1" }, session: await demoWorker() });
     expect(res.status).toBe(403);
+  });
+});
+
+describe("transaction retries", () => {
+  it("reports success when a retry finds its own lost commit", async () => {
+    const shiftId = await createShift();
+    const person = await createStaff("steward");
+    const startedAt = new Date();
+    const first = await runTransaction(getDb(), (tx) => assignInTransaction(tx, { shiftId, staffId: person.id }, "manager", { isRetry: false, startedAt }));
+    expect(first.ok).toBe(true);
+
+    // As if the COMMIT landed but its reply was lost, and runTransaction tried again.
+    const retry = await runTransaction(getDb(), (tx) => assignInTransaction(tx, { shiftId, staffId: person.id }, "manager", { isRetry: true, startedAt }));
+    expect(retry).toMatchObject({ ok: true, assignment: { id: first.ok ? first.assignment.id : -1 } });
+    expect(await assignmentCount(shiftId)).toBe(1);
+  });
+
+  it("still says already_assigned when the existing row is older than the request", async () => {
+    const shiftId = await createShift();
+    const person = await createStaff("steward");
+    await placeDirectly(shiftId, person.id);
+    const retry = await runTransaction(getDb(), (tx) =>
+      assignInTransaction(tx, { shiftId, staffId: person.id }, "manager", { isRetry: true, startedAt: new Date() }),
+    );
+    expect(retry).toMatchObject({ ok: false, code: "already_assigned" });
+  });
+
+  it("waits at most 5 seconds for a row lock", async () => {
+    const [rows] = (await getDb().execute(sql`SELECT @@SESSION.innodb_lock_wait_timeout AS seconds`)) as unknown as [{ seconds: number }[]];
+    expect(Number(rows[0].seconds)).toBe(5);
   });
 });

@@ -35,7 +35,7 @@ export default defineConfig({
           // integration tests share one MySQL database, so run files one at a time
           fileParallelism: false,
           testTimeout: 30_000,
-          hookTimeout: 60_000,
+          hookTimeout: 120_000,
         },
       },
     ],

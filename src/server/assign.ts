@@ -3,7 +3,7 @@
 import { and, count, desc, eq, gte, lte, ne } from "drizzle-orm";
 import { blocks, checkAssignment, type RuleBreak, type RuleInput, warnings } from "@/lib/rules";
 import { DAY_MS } from "@/lib/time";
-import { type Db, runTransaction, type Tx } from "./db/client";
+import { type Attempt, type Db, runTransaction, type Tx } from "./db/client";
 import { assignment, auditLog, event, licence, location, role, shift, type ShiftRow, staff, type StaffRow } from "./db/schema";
 
 type Executor = Db | Tx;
@@ -89,13 +89,17 @@ async function lastAssigned(db: Executor, shiftId: number) {
   return row ?? null;
 }
 
-/** A failure for the first blocking rule, or null when nothing blocks. */
-export async function blockingFailure(db: Executor, breaks: RuleBreak[], shiftId: number) {
+/**
+ * A failure for the first blocking rule, or null when nothing blocks.
+ * `revealTakenBy` is for managers only: workers never see other people's names.
+ */
+export async function blockingFailure(db: Executor, breaks: RuleBreak[], shiftId: number, { revealTakenBy }: { revealTakenBy: boolean }) {
   const blocking = blocks(breaks);
   const full = blocking.find((b) => b.code === "shift_full");
   if (full) {
-    // Its own code, because the board treats it differently: refresh the card and say who got the slot.
-    return fail(409, "shift_full", full.message, { breaks, takenBy: await lastAssigned(db, shiftId) });
+    // Its own code, because the board treats it differently: refresh the card and, for a manager, say who got the slot.
+    const details = revealTakenBy ? { breaks, takenBy: await lastAssigned(db, shiftId) } : { breaks };
+    return fail(409, "shift_full", full.message, details);
   }
   if (blocking.length > 0) return fail(409, "rule_blocked", blocking[0].message, { breaks });
   return null;
@@ -109,8 +113,11 @@ export function isDuplicateKeyError(error: unknown): boolean {
   return false;
 }
 
-/** Assigns inside an open transaction. Start it with runTransaction (READ COMMITTED). */
-export async function assignInTransaction(tx: Tx, input: AssignInput, actor: string): Promise<AssignOutcome> {
+/**
+ * Assigns inside an open transaction. Start it with runTransaction (READ COMMITTED).
+ * Only managers assign, so failures may name who took the slot.
+ */
+export async function assignInTransaction(tx: Tx, input: AssignInput, actor: string, attempt: Attempt): Promise<AssignOutcome> {
   // Lock the shift row. Every assign to this shift queues here, so the count
   // below can't change under us and the last slot can only be taken once.
   const [target] = await tx.select().from(shift).where(eq(shift.id, input.shiftId)).for("update");
@@ -122,13 +129,21 @@ export async function assignInTransaction(tx: Tx, input: AssignInput, actor: str
   if (!person) return fail(404, "staff_not_found", "That person doesn't exist any more.");
 
   const [existing] = await tx
-    .select({ id: assignment.id })
+    .select()
     .from(assignment)
     .where(and(eq(assignment.shiftId, target.id), eq(assignment.staffId, person.id)));
-  if (existing) return fail(409, "already_assigned", `${person.name} is already on this shift.`);
+  if (existing) {
+    // On a retry, a row this actor wrote since the first attempt began is our own
+    // commit whose reply was lost. Report the success it was. Notes aren't
+    // recomputed here; this path only runs after a dropped connection.
+    if (attempt.isRetry && existing.createdBy === actor && existing.createdAt >= attempt.startedAt) {
+      return { ok: true, assignment: existing, notes: [] };
+    }
+    return fail(409, "already_assigned", `${person.name} is already on this shift.`);
+  }
 
   const breaks = checkAssignment(await loadRuleInput(tx, target, person));
-  const blocked = await blockingFailure(tx, breaks, target.id);
+  const blocked = await blockingFailure(tx, breaks, target.id, { revealTakenBy: true });
   if (blocked) return blocked;
 
   const overridden = warnings(breaks);
@@ -169,7 +184,7 @@ export async function assignInTransaction(tx: Tx, input: AssignInput, actor: str
 }
 
 export function assignStaff(db: Db, input: AssignInput, actor: string): Promise<AssignOutcome> {
-  return runTransaction(db, (tx) => assignInTransaction(tx, input, actor));
+  return runTransaction(db, (tx, attempt) => assignInTransaction(tx, input, actor, attempt));
 }
 
 export type RemoveOutcome =
@@ -178,7 +193,10 @@ export type RemoveOutcome =
 
 /** Deletes an assignment and returns the deleted row so Undo can restore it. */
 export function removeAssignment(db: Db, assignmentId: number, actor: string): Promise<RemoveOutcome> {
-  return runTransaction(db, async (tx): Promise<RemoveOutcome> => {
+  // Kept across attempts: if a retry finds the row gone after an earlier
+  // attempt read it, that earlier attempt's delete is what committed.
+  let readEarlier: (typeof assignment.$inferSelect) | null = null;
+  return runTransaction(db, async (tx, attempt): Promise<RemoveOutcome> => {
     const [row] = await tx
       .select({ assignment, eventId: shift.eventId, staffName: staff.name })
       .from(assignment)
@@ -186,7 +204,8 @@ export function removeAssignment(db: Db, assignmentId: number, actor: string): P
       .innerJoin(staff, eq(staff.id, assignment.staffId))
       .where(eq(assignment.id, assignmentId));
     const notFound = { ok: false, status: 404, code: "assignment_not_found", message: "That assignment was already removed.", details: null } as const;
-    if (!row) return notFound;
+    if (!row) return attempt.isRetry && readEarlier ? { ok: true, assignment: readEarlier } : notFound;
+    readEarlier = row.assignment;
 
     // No FOR UPDATE here: a locking read with joins would also lock the shift and
     // staff rows, in a different order from assign. The delete's own row count

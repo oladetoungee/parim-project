@@ -3,14 +3,17 @@ import { sessionBodySchema } from "@/lib/schemas";
 import { getDb } from "@/server/db/client";
 import { staff } from "@/server/db/schema";
 import { HttpError, json, parseWith, readJsonBody, route } from "@/server/http";
-import { DEMO_WORKER_EMAIL, getSession, type Session, sessionSetCookie } from "@/server/session";
+import { DEMO_WORKER_EMAIL, readSession, type Session, sessionSetCookie } from "@/server/session";
 
-/** The current session, so the role switch can show where it is. */
+/** The current session (null if there is none), so the role switch can show where it is. */
 export const GET = route(async (request) => {
-  return json({ session: getSession(request) });
+  return json({ session: readSession(request) });
 });
 
-/** Switches role. Sets the signed cookie that every other route reads. */
+/**
+ * Switches role. Sets the signed cookie that every other route reads. Needs no
+ * existing session; the JSON content type keeps a cross-site form from calling it.
+ */
 export const POST = route(async (request) => {
   const body = parseWith(sessionBodySchema, (await readJsonBody(request)).value);
 

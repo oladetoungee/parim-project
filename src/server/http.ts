@@ -42,9 +42,15 @@ export function parseQuery<S extends z.ZodType>(schema: S, request: Request): z.
 
 /**
  * Reads the body once and keeps the raw text, which idempotency fingerprints.
+ * The JSON content type is required: an HTML form on another site can't send
+ * it without a CORS preflight, which this API never answers.
  * An empty body counts as `{}` so bodiless POSTs (approve) still validate.
  */
 export async function readJsonBody(request: Request): Promise<{ raw: string; value: unknown }> {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!/^application\/json\b/i.test(contentType)) {
+    throw new HttpError(415, "unsupported_media_type", "Send the request body as JSON, with Content-Type: application/json.");
+  }
   const raw = await request.text();
   if (raw.trim() === "") return { raw, value: {} };
   try {
@@ -70,8 +76,19 @@ export function route<C = unknown>(handler: Handler<C>): Handler<C> {
       if (error instanceof HttpError) {
         return errorResponse(error.status, error.code, error.message, error.details);
       }
+      if (isLockWaitTimeout(error)) {
+        return errorResponse(503, "busy", "Someone else is changing this shift right now. Try again in a moment.");
+      }
       console.error(error);
       return errorResponse(500, "internal_error", "Something went wrong on our side. Try again.");
     }
   };
+}
+
+/** innodb_lock_wait_timeout ran out (see src/server/db/client.ts). Nothing was written. */
+function isLockWaitTimeout(error: unknown): boolean {
+  for (let e: unknown = error; e; e = (e as { cause?: unknown }).cause) {
+    if ((e as { code?: string }).code === "ER_LOCK_WAIT_TIMEOUT") return true;
+  }
+  return false;
 }

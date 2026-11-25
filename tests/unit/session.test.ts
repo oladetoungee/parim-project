@@ -27,9 +27,9 @@ describe("session cookie", () => {
     process.env.SESSION_SECRET = "unit-test-secret-at-least-16";
   });
 
-  it("treats no cookie as the manager and a bad cookie as 401", () => {
-    expect(getSession(requestWith())).toEqual({ role: "manager" });
-    expect(() => getSession(requestWith("shiftline_session=nope"))).toThrowError(expect.objectContaining({ status: 401 }));
+  it("refuses a request with no cookie, and a bad cookie, with 401", () => {
+    expect(() => getSession(requestWith())).toThrowError(expect.objectContaining({ status: 401, code: "no_session" }));
+    expect(() => getSession(requestWith("shiftline_session=nope"))).toThrowError(expect.objectContaining({ status: 401, code: "invalid_session" }));
   });
 
   it("gives workers 403 on manager routes", () => {

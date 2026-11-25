@@ -4,8 +4,8 @@
 // Usage: tsx --env-file=.env.local scripts/seed.ts [--test]
 // --test seeds TEST_DATABASE_URL instead of DATABASE_URL.
 
-import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import type mysql from "mysql2/promise";
 import { pathToFileURL } from "node:url";
 import { connectWithRetry } from "./migrate";
 import { checkAssignment, type BookedShift, SIA_KIND } from "../src/lib/rules";
@@ -326,33 +326,35 @@ function assertSeedFollowsRules(seed: Seed) {
 
 const TABLES = ["audit_log", "shift_request", "assignment", "shift", "licence", "staff", "role", "location", "event"];
 
-export async function seedDatabase(url: string) {
+/** Truncates and seeds through an open connection. Needs `multipleStatements` on it. */
+export async function seedConnection(connection: mysql.Connection) {
   const seed = buildSeed();
   assertSeedFollowsRules(seed);
-
-  const connection = await connectWithRetry(url);
   const db = drizzle({ client: connection, schema, mode: "default" });
-  try {
-    // TRUNCATE needs foreign key checks off, and the setting is per connection,
-    // which is why this uses one connection rather than a pool.
-    await db.execute(sql`SET FOREIGN_KEY_CHECKS = 0`);
-    for (const table of TABLES) await db.execute(sql.raw(`TRUNCATE TABLE \`${table}\``));
-    await db.execute(sql`SET FOREIGN_KEY_CHECKS = 1`);
 
-    await db.insert(schema.event).values([
+  // One round trip. TRUNCATE needs foreign key checks off, and that setting is
+  // per connection, which is why this takes a connection rather than a pool.
+  // TRUNCATE commits on its own, so it can't share the transaction below.
+  await connection.query(
+    ["SET FOREIGN_KEY_CHECKS = 0", ...TABLES.map((t) => `TRUNCATE TABLE \`${t}\``), "SET FOREIGN_KEY_CHECKS = 1"].join(";\n"),
+  );
+
+  // One multi-row insert per table, all in one transaction.
+  await db.transaction(async (tx) => {
+    await tx.insert(schema.event).values([
       { id: 1, name: "Autumn race day", venue: "Riverbank Racecourse", startsOn: SEED.date, endsOn: SEED.date, timezone: TZ },
       { id: 2, name: "Midweek fixtures", venue: "Riverbank Racecourse", startsOn: "2026-11-30", endsOn: "2026-12-04", timezone: TZ },
     ]);
-    await db.insert(schema.location).values([
+    await tx.insert(schema.location).values([
       ...LOCATIONS.map((name, i) => ({ id: i + 1, eventId: 1, name, sortOrder: i })),
       { id: LOCATIONS.length + 1, eventId: 2, name: "Main stand", sortOrder: 0 },
     ]);
-    await db.insert(schema.role).values(ROLES.map(({ id, name, requiresSia }) => ({ id, name, requiresSia })));
-    await db.insert(schema.staff).values(
+    await tx.insert(schema.role).values(ROLES.map(({ id, name, requiresSia }) => ({ id, name, requiresSia })));
+    await tx.insert(schema.staff).values(
       seed.staffRows.map((s) => ({ id: s.id, name: s.name, roleId: roleId(s.roleKey), email: s.email, weeklyHourLimit: 48 })),
     );
-    await db.insert(schema.licence).values(seed.licences);
-    await db.insert(schema.shift).values(
+    await tx.insert(schema.licence).values(seed.licences);
+    await tx.insert(schema.shift).values(
       seed.shifts.map((s) => ({
         id: s.id,
         eventId: s.eventId,
@@ -366,10 +368,10 @@ export async function seedDatabase(url: string) {
     );
 
     const createdAt = (i: number) => new Date(Date.UTC(2026, 10, 20, 9, 0) + i * 60_000);
-    await db.insert(schema.assignment).values(
+    await tx.insert(schema.assignment).values(
       seed.assignments.map((a, i) => ({ id: i + 1, ...a, createdBy: "manager", createdAt: createdAt(i) })),
     );
-    await db.insert(schema.auditLog).values(
+    await tx.insert(schema.auditLog).values(
       seed.assignments.map((a, i) => {
         const s = seed.shifts.find((x) => x.id === a.shiftId)!;
         return {
@@ -382,9 +384,7 @@ export async function seedDatabase(url: string) {
         };
       }),
     );
-  } finally {
-    await connection.end();
-  }
+  });
 
   const raceDay = seed.shifts.filter((s) => s.eventId === SEED.eventId);
   return {
@@ -393,6 +393,15 @@ export async function seedDatabase(url: string) {
     covered: raceDay.filter((s) => s.filled >= s.slots).length,
     assignments: seed.assignments.length,
   };
+}
+
+export async function seedDatabase(url: string) {
+  const connection = await connectWithRetry(url);
+  try {
+    return await seedConnection(connection);
+  } finally {
+    await connection.end();
+  }
 }
 
 async function main() {
