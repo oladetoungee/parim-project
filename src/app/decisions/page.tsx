@@ -27,8 +27,8 @@ export default function DecisionsPage() {
           </h1>
           <p className="mt-6 text-16 text-muted">
             I built ParimShift for the Senior Full-Stack Engineer role at Parim. It is one slice of a
-            scheduling product: staffing a race day with 42 shifts across six locations. This page lists
-            the calls I made, the options I dropped and what each choice cost.
+            scheduling product: staffing a race day with 42 shifts across six locations. Each card below has
+            the problem, the options, my choice and its cost.
           </p>
         </header>
 
