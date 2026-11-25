@@ -19,6 +19,7 @@ import { StaffRow } from "@/components/ui/StaffRow";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { TimeRangeField } from "@/components/ui/TimeRangeField";
 import { ToastProvider, useToast } from "@/components/ui/Toast";
+import { TopBar } from "@/features/shell/TopBar";
 
 const people = [
   { id: "1", name: "Ana Tamm" },
@@ -40,6 +41,7 @@ const themes = [
 export default function SystemPage() {
   return (
     <ToastProvider>
+      <TopBar current="system" />
       <Gallery />
     </ToastProvider>
   );
@@ -111,8 +113,8 @@ function Gallery() {
           <Field label="Slots" error="Enter at least 1 slot.">
             <Input type="number" defaultValue={0} className="tabular" />
           </Field>
-          <Field label="Notes">
-            <Input placeholder="Radio channel, meeting point" />
+          <Field label="Notes" hint="For example the radio channel or meeting point">
+            <Input />
           </Field>
           <Field label="Role">
             <Select defaultValue="steward">
@@ -173,7 +175,7 @@ function Gallery() {
         </Row>
       </Section>
 
-      <Section title="Avatar" note="28px. Stacks overlap by 6px and show +N after three. Names are hidden in the worker view.">
+      <Section title="Avatar" note="28px. Stacks overlap by 2px and show +N after three. Names are hidden in the worker view. On a shift card faces are 24px with 10px initials.">
         <Row>
           <Avatar name="Ana Tamm" />
           <Avatar />
@@ -183,7 +185,7 @@ function Gallery() {
         </Row>
       </Section>
 
-      <Section title="Shift card" note="A ticket: head, tear line, then one place per slot. Status, then interaction states, then overflow at 240 and 176 wide.">
+      <Section title="Shift card" note="A ticket: head, tear line, then one place per slot. Status, then interaction states, then overflow at 240, 176 and 108 wide. Under 150px the role, the count and the time each take a line, and the status word moves to the accessible name.">
         <Row>
           <ShiftCard role="Steward" location="Gate A" start="10:00" end="16:00" filled={0} needed={4} status="open" />
           <ShiftCard role="Steward" location="Gate A" start="10:00" end="16:00" filled={2} needed={4} status="partly-filled" people={people.slice(0, 2)} />
@@ -224,6 +226,9 @@ function Gallery() {
         <Row>
           <ShiftCard role="Bar staff" location="Bar 2" start="11:00" end="23:00" filled={3} needed={8} status="partly-filled" people={people.slice(0, 3)} />
           <ShiftCard role="Steward" location="Gate A" start="10:00" end="16:00" filled={2} needed={6} status="partly-filled" people={people.slice(0, 2)} className="w-44" />
+          <ShiftCard role="Steward" location="Gate A" start="14:00" end="16:00" filled={1} needed={3} status="partly-filled" people={people.slice(2, 3)} className="w-[108px]" />
+          <ShiftCard role="Bar staff" location="Bar 1" start="14:00" end="16:00" filled={2} needed={5} status="partly-filled" people={people.slice(0, 2)} className="w-[108px]" />
+          <ShiftCard role="Security" location="Car park" start="14:00" end="16:00" filled={0} needed={2} status="open" className="w-[108px]" />
         </Row>
         <p className="text-12 text-muted">Click the fourth card in the second row to play the conflict shake.</p>
       </Section>
@@ -349,8 +354,8 @@ function Gallery() {
               <Field label="Slots">
                 <Input type="number" defaultValue={4} className="tabular" />
               </Field>
-              <Field label="Notes">
-                <Input placeholder="Radio channel, meeting point" />
+              <Field label="Notes" hint="For example the radio channel or meeting point">
+                <Input />
               </Field>
             </div>
           </DrawerContent>

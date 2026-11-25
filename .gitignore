@@ -31,3 +31,11 @@ blob-report/
 .DS_Store
 *.log
 .claude/settings.local.json
+
+# local scratch and unused Next starter icons
+hello.md
+public/file.svg
+public/globe.svg
+public/next.svg
+public/vercel.svg
+public/window.svg

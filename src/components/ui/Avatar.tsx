@@ -17,7 +17,15 @@ const circle =
   "inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-paper text-12 font-medium text-muted ring-2 ring-canvas select-none";
 
 /* Figma: Avatar. 28px circle, 12px Medium initials, bg/paper, 2px canvas ring. Property: hidden. */
-export function Avatar({ name, className }: { name?: string; className?: string }) {
+export function Avatar({ name, className, decorative = false }: { name?: string; className?: string; decorative?: boolean }) {
+  // Decorative when the name is printed next to it (a staff row).
+  if (decorative) {
+    return (
+      <span aria-hidden="true" className={cn(circle, className)}>
+        {name ? initials(name) : ""}
+      </span>
+    );
+  }
   return (
     <span
       role="img"
@@ -37,7 +45,7 @@ type AvatarStackProps = {
   className?: string;
 };
 
-/* Figma: Avatar stack. Overlap 6px, "+N" after 3. */
+/* Figma: Avatar stack. Overlap 2px, so initials are never cut. "+N" after 3. */
 export function AvatarStack({ people, max = 3, className }: AvatarStackProps) {
   if (people.length === 0) return null;
 
@@ -49,7 +57,7 @@ export function AvatarStack({ people, max = 3, className }: AvatarStackProps) {
 
   return (
     <span role="img" aria-label={label} className={cn("inline-flex items-center", className)}>
-      <span aria-hidden="true" className="inline-flex items-center -space-x-1.5">
+      <span aria-hidden="true" className="inline-flex items-center -space-x-0.5">
         {shown.map((p) => (
           <span key={p.id} className={circle}>
             {p.name ? initials(p.name) : ""}

@@ -54,7 +54,7 @@ function OverrideForm({ request, onClose }: { request: OverrideRequest; onClose:
   return (
     <Dialog.Portal>
       <Dialog.Overlay className="motion-overlay fixed inset-0 z-40 bg-scrim" />
-      <Dialog.Content className="motion-popover fixed top-1/2 left-1/2 z-50 flex w-[calc(100%-32px)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-8 border border-hairline bg-raised shadow-lifted outline-none">
+      <Dialog.Content className="motion-popover fixed top-1/2 left-1/2 z-50 flex w-[calc(100%-32px)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-8 border border-hairline bg-raised shadow-lifted outline-hidden">
         <form onSubmit={submit} noValidate>
           <div className="flex flex-col gap-4 px-6 pt-6 pb-4">
             <Dialog.Title className="font-display text-20 leading-7 font-bold tracking-[-0.01em] text-ink">

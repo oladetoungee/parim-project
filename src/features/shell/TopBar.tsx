@@ -17,18 +17,30 @@ type TopBarProps = {
   className?: string;
 };
 
-/** Shared by the board, the system page and the decisions page. */
+/**
+ * Shared by the board, the system page and the decisions page. From 640px
+ * up it is one 56px row. Under 640px the links drop to a compact 40px second
+ * row with a hairline above, so System and Decisions stay reachable on a phone.
+ */
 export function TopBar({ current, children, className }: TopBarProps) {
   return (
-    <header className={cn("flex h-14 shrink-0 items-center gap-6 border-b border-hairline bg-canvas px-4 md:gap-8 md:px-8", className)}>
+    <header
+      className={cn(
+        "flex shrink-0 flex-wrap items-center border-b border-hairline bg-canvas px-4 sm:h-14 sm:flex-nowrap sm:gap-8 md:px-8",
+        className,
+      )}
+    >
       <Link
         href="/"
-        className="font-display text-20 leading-7 tracking-[-0.02em] text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="inline-flex h-14 items-center font-display text-20 leading-7 tracking-[-0.02em] text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <span className="font-bold">Parim</span>
         <span className="font-light">Shift</span>
       </Link>
-      <nav aria-label="Main" className="hidden sm:block">
+      <nav
+        aria-label="Main"
+        className="order-last -mx-4 basis-[calc(100%+2rem)] border-t border-hairline px-4 sm:order-none sm:mx-0 sm:basis-auto sm:border-t-0 sm:px-0"
+      >
         <ul className="flex items-center gap-6">
           {links.map((link) => {
             const active = link.section === current;
@@ -38,7 +50,7 @@ export function TopBar({ current, children, className }: TopBarProps) {
                   href={link.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative inline-flex h-14 items-center text-14 font-medium",
+                    "relative inline-flex h-10 items-center text-14 font-medium sm:h-14",
                     "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
                     active
                       ? "text-ink after:absolute after:inset-x-0 after:bottom-[-1px] after:h-0.5 after:bg-ink"
@@ -52,7 +64,7 @@ export function TopBar({ current, children, className }: TopBarProps) {
           })}
         </ul>
       </nav>
-      {children ? <div className="ml-auto flex items-center gap-2 md:gap-3">{children}</div> : null}
+      {children ? <div className="ml-auto flex h-14 items-center gap-2 md:gap-3">{children}</div> : null}
     </header>
   );
 }

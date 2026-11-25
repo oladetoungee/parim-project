@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import type { BoardShift, StaffListItem } from "@/server/db/queries";
 import { capitalise, shiftPlace } from "./board-math";
 import type { DropCheck } from "./dnd";
-import { rowLicence, staffLabel } from "./StaffPanel";
+import { rowLicence, StaffColumns } from "./StaffPanel";
 
 type StaffSheetProps = {
   shift: BoardShift | null;
@@ -37,7 +37,7 @@ export function StaffSheet({ shift, onClose, items, search, onSearchChange, even
           <Dialog.Overlay className="motion-overlay fixed inset-0 z-40 bg-scrim" />
           <Dialog.Content
             className={cn(
-              "fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-8 border-t border-hairline bg-raised shadow-lifted outline-none",
+              "fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-8 border-t border-hairline bg-raised shadow-lifted outline-hidden",
               "motion-safe:data-[state=open]:animate-[toast-in_var(--duration-base)_var(--easing-enter)_both]",
               "motion-reduce:data-[state=open]:animate-fade-in",
             )}
@@ -67,7 +67,10 @@ export function StaffSheet({ shift, onClose, items, search, onSearchChange, even
                 Edit shift
               </Button>
             </div>
-            <ul aria-label="Staff" className="min-h-0 flex-1 overflow-y-auto border-t border-hairline">
+            <div className="border-t border-hairline">
+              <StaffColumns />
+            </div>
+            <ul aria-label="Staff" className="min-h-0 flex-1 overflow-y-auto px-1 pt-1 pb-2">
               {items?.map((item) => {
                 const result = check(item.id, shift.id);
                 const reasonId = `${searchId}-reason-${item.id}`;
@@ -78,8 +81,7 @@ export function StaffSheet({ shift, onClose, items, search, onSearchChange, even
                       role="button"
                       tabIndex={0}
                       aria-disabled={result.valid ? undefined : true}
-                      aria-label={staffLabel(item, eventDate)}
-                      aria-describedby={result.valid ? undefined : reasonId}
+                                    aria-describedby={result.valid ? undefined : reasonId}
                       onClick={() => result.valid && onPick(shift, item)}
                       onKeyDown={(e) => {
                         if (result.valid && (e.key === "Enter" || e.key === " ")) {
@@ -87,7 +89,7 @@ export function StaffSheet({ shift, onClose, items, search, onSearchChange, even
                           onPick(shift, item);
                         }
                       }}
-                      className="block outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                      className="block outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid"
                     >
                       <StaffRow
                         tabIndex={-1}

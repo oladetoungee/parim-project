@@ -29,7 +29,7 @@ describe("CoverageStrip", () => {
         ]}
       />,
     );
-    expect(screen.getByRole("button", { name: "14:00 to 15:00, 9 of 14 staff, 5 short." })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "5 short, 14:00 to 15:00, 9 of 14 staff." })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "13:00 to 14:00, 10 of 10 staff, covered." })).toBeInTheDocument();
   });
 });

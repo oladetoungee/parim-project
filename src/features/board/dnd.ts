@@ -2,7 +2,6 @@
 // keyboard moves between shifts, and what a screen reader hears.
 
 import {
-  closestCenter,
   pointerWithin,
   type Announcements,
   type CollisionDetection,
@@ -18,36 +17,82 @@ export const shiftDropId = (id: number) => `shift-${id}`;
 export const staffDragId = (id: number) => `staff-${id}`;
 export const idFrom = (id: UniqueIdentifier) => Number(String(id).split("-")[1]);
 
-/** The mouse picks the card under the pointer. The keyboard has no pointer, so it takes the nearest centre. */
-export const boardCollision: CollisionDetection = (args) =>
-  args.pointerCoordinates ? pointerWithin(args) : closestCenter(args);
-
-const NEXT = ["ArrowRight", "ArrowDown"];
-const PREVIOUS = ["ArrowLeft", "ArrowUp"];
+/** Shifts the dragged person can go on, in keyboard reading order. `row` is the location row's index. */
+export type KeyboardTarget = { id: number; row: number };
 
 /**
- * Arrow keys jump from shift to shift in reading order (location by location,
- * then by start time) instead of nudging 25px at a time. `order` is read on
- * every key press so filters apply straight away.
+ * The mouse picks the card under the pointer. A keyboard drag has no
+ * pointer: the target is whatever the arrow keys chose (`keyboardTarget`),
+ * not the card nearest the floating row, so the overlay can sit below the
+ * card it is over without taking another card by accident.
  */
-export function shiftKeyboardCoordinates(order: () => readonly number[]): KeyboardCoordinateGetter {
-  return (event, { context }) => {
-    const forward = NEXT.includes(event.code);
-    if (!forward && !PREVIOUS.includes(event.code)) return undefined;
+export function boardCollision(keyboardTarget: () => number | null): CollisionDetection {
+  return (args) => {
+    if (args.pointerCoordinates) return pointerWithin(args);
+    const id = keyboardTarget();
+    return id === null ? [] : [{ id: shiftDropId(id) }];
+  };
+}
+
+/** Sent once by the board right after a keyboard pick-up, to move onto the first valid shift. */
+export const PICK_UP_CODE = "BoardPickUp";
+/** The floating row sits this far below the card it is over, so the card stays readable. */
+export const OVERLAY_GAP = 8;
+
+/**
+ * Arrow keys jump between the shifts this person can take, never onto one
+ * they can't. Left and right: previous and next in reading order (location
+ * by location, then as drawn). Up and down: the nearest valid shift, by
+ * horizontal position, in the closest location row above or below that has
+ * one. `targets` is read on every key press so filters apply straight away.
+ */
+export function shiftKeyboardCoordinates(
+  targets: (staffId: number) => readonly KeyboardTarget[],
+  current: { get: () => number | null; set: (id: number | null) => void },
+): KeyboardCoordinateGetter {
+  return (event, { active, context }) => {
+    const code = event.code;
+    const horizontal = code === "ArrowRight" || code === "ArrowLeft";
+    const vertical = code === "ArrowDown" || code === "ArrowUp";
+    if (!horizontal && !vertical && code !== PICK_UP_CODE) return undefined;
     event.preventDefault();
 
-    const ids = order();
-    const { over, collisionRect, droppableRects } = context;
-    if (ids.length === 0 || !collisionRect) return undefined;
+    const list = targets(idFrom(active));
+    const { droppableRects, collisionRect } = context;
+    if (list.length === 0 || !collisionRect) {
+      current.set(null);
+      return undefined;
+    }
 
-    const current = over ? ids.indexOf(idFrom(over.id)) : -1;
-    const nextIndex = current === -1 ? (forward ? 0 : ids.length - 1) : Math.min(ids.length - 1, Math.max(0, current + (forward ? 1 : -1)));
-    const rect = droppableRects.get(shiftDropId(ids[nextIndex]));
+    const index = list.findIndex((t) => t.id === current.get());
+    let next: KeyboardTarget | undefined;
+    if (code === PICK_UP_CODE || index === -1) {
+      next = list[0];
+    } else if (horizontal) {
+      next = list[Math.min(list.length - 1, Math.max(0, index + (code === "ArrowRight" ? 1 : -1)))];
+    } else {
+      const here = list[index];
+      const down = code === "ArrowDown";
+      const others = list.filter((t) => (down ? t.row > here.row : t.row < here.row));
+      if (others.length === 0) {
+        next = here;
+      } else {
+        const row = down ? Math.min(...others.map((t) => t.row)) : Math.max(...others.map((t) => t.row));
+        const centre = (id: number) => {
+          const r = droppableRects.get(shiftDropId(id));
+          return r ? r.left + r.width / 2 : 0;
+        };
+        const x = centre(here.id);
+        next = others
+          .filter((t) => t.row === row)
+          .reduce((best, t) => (Math.abs(centre(t.id) - x) < Math.abs(centre(best.id) - x) ? t : best));
+      }
+    }
+
+    current.set(next.id);
+    const rect = droppableRects.get(shiftDropId(next.id));
     if (!rect) return undefined;
-    return {
-      x: rect.left + rect.width / 2 - collisionRect.width / 2,
-      y: rect.top + rect.height / 2 - collisionRect.height / 2,
-    };
+    return { x: rect.left, y: rect.top + rect.height + OVERLAY_GAP };
   };
 }
 
@@ -64,15 +109,17 @@ type Lookup = {
   person: (id: UniqueIdentifier) => { name: string; roleName: string } | undefined;
   shift: (id: UniqueIdentifier) => BoardShift | undefined;
   check: (staffId: number, shiftId: number) => DropCheck | undefined;
+  /** How many shifts on the board this person can go on. */
+  validCount: (staffId: number) => number;
 };
 
 export const screenReaderInstructions: ScreenReaderInstructions = {
   draggable:
-    "To assign this person, press Space to pick them up. Use the arrow keys to move between shifts, Space to assign them to the shift you are over, or Escape to cancel.",
+    "To assign this person, press Space to pick them up. It moves to the first shift they can take. Left and right arrows move between those shifts, up and down change location. Space assigns, Escape cancels.",
 };
 
 /** Plain English for each step of a keyboard or mouse drag. */
-export function boardAnnouncements({ person, shift, check }: Lookup): Announcements {
+export function boardAnnouncements({ person, shift, check, validCount }: Lookup): Announcements {
   const who = (id: UniqueIdentifier) => {
     const p = person(id);
     return p ? `${p.name}, ${p.roleName}` : "This person";
@@ -89,8 +136,11 @@ export function boardAnnouncements({ person, shift, check }: Lookup): Announceme
   };
 
   return {
-    onDragStart: ({ active }) =>
-      `Picked up ${who(active.id)}. Use the arrow keys to move between shifts, Space to assign, Escape to cancel.`,
+    onDragStart: ({ active }) => {
+      const count = validCount(idFrom(active.id));
+      if (count === 0) return `No shifts can take ${person(active.id)?.name ?? "this person"}. Press Esc to cancel.`;
+      return `Picked up ${who(active.id)}. ${count === 1 ? "1 shift fits" : `${count} shifts fit`}. Left and right arrows move between them, up and down change location. Space assigns, Escape cancels.`;
+    },
     onDragOver: ({ active, over }) => (over ? describeOver(active.id, over.id) : `${who(active.id)}. Not over a shift.`),
     onDragEnd: ({ active, over }) => {
       const name = person(active.id)?.name ?? "This person";

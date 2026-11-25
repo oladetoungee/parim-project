@@ -113,7 +113,11 @@ function recount(board: Board, before: BoardShift, after: BoardShift): Board {
 /** Puts a person on a shift in the cached board. Only the one shift object changes, so only its card re-renders. */
 export function addPerson(board: Board, shiftId: number, person: BoardPerson): Board {
   const before = board.shifts.find((s) => s.id === shiftId);
-  if (!before || before.assigned.some((p) => p.staffId === person.staffId)) return board;
+  if (!before) return board;
+  const existing = before.assigned.find((p) => p.staffId === person.staffId) as LeavingPerson | undefined;
+  // Still on the card mid-exit (a quick retry or override): keep them, stop the exit.
+  if (existing?.leaving) return setLeaving(board, shiftId, person.staffId, false);
+  if (existing) return board;
   return recount(board, before, withPeople(before, [...before.assigned, person], before.filled + 1));
 }
 
@@ -123,6 +127,33 @@ export function removePerson(board: Board, shiftId: number, staffId: number): Bo
   const assigned = before.assigned.filter((p) => p.staffId !== staffId);
   if (assigned.length === before.assigned.length) return board;
   return recount(board, before, withPeople(before, assigned, Math.max(0, before.filled - 1)));
+}
+
+/**
+ * The cache can mark a person as leaving: the card plays their exit (back
+ * toward the staff panel) and the write hook drops them once it has played.
+ * Only the one shift object changes, and the fill count holds until then.
+ */
+export type LeavingPerson = BoardPerson & { leaving?: boolean };
+
+export function setLeaving(board: Board, shiftId: number, staffId: number, leaving: boolean): Board {
+  const shift = board.shifts.find((s) => s.id === shiftId);
+  if (!shift?.assigned.some((p) => p.staffId === staffId)) return board;
+  return {
+    ...board,
+    shifts: board.shifts.map((s) =>
+      s.id === shiftId
+        ? { ...s, assigned: s.assigned.map((p) => (p.staffId === staffId ? ({ ...p, leaving } as LeavingPerson) : p)) }
+        : s,
+    ),
+  };
+}
+
+/** Drops a person marked leaving. Someone put back on the shift since (Retry, Undo) stays. */
+export function removeLeaving(board: Board, shiftId: number, staffId: number): Board {
+  const shift = board.shifts.find((s) => s.id === shiftId);
+  const person = shift?.assigned.find((p) => p.staffId === staffId) as LeavingPerson | undefined;
+  return person?.leaving ? removePerson(board, shiftId, staffId) : board;
 }
 
 /** Swaps the temporary id of an optimistic person for the real assignment id. */

@@ -25,7 +25,7 @@ test("a manager assigns someone by keyboard, sees the count go up, then undoes i
   expect(person, "someone can take it").toBeTruthy();
 
   await page.goto("/board");
-  // Narrow the board to that one shift, so one arrow press lands on it.
+  // Narrow the board so that shift is the first one this person can take.
   await page.getByLabel("Location").selectOption(String(target.locationId));
   await page.getByLabel("Only short shifts").check();
   await page.getByLabel("Role", { exact: true }).selectOption(String(target.roleId));
@@ -39,11 +39,18 @@ test("a manager assigns someone by keyboard, sees the count go up, then undoes i
   // dnd-kit's live region narrates each step; waiting on it also gives the
   // keyboard sensor time to attach its listeners after the pick-up.
   const live = page.locator('[id^="DndLiveRegion"]');
+  // Picking up moves straight onto the first shift this person can take:
+  // here the only one left after the filters. It gets the solid outline and
+  // the floating row sits below it.
   await page.keyboard.press("Space");
-  await expect(live).toContainText(`${person.name}, ${target.roleName}.`);
-  await page.waitForTimeout(100);
+  await expect(live).toContainText(
+    `${person.name}, ${target.roleName}. Over ${target.locationName} ${target.startTime} to ${target.endTime}, ${target.filled} of ${target.slots} filled. Press Space to assign.`,
+  );
+  const wrapper = page.locator(`[data-drop-over]:has(button[data-shift-id="${target.id}"])`);
+  await expect(wrapper).toHaveAttribute("data-drop", "valid");
+  // There is no other valid shift to the right, so the arrow keeps the target.
   await page.keyboard.press("ArrowRight");
-  await expect(live).toContainText(`Over ${target.locationName} ${target.startTime} to ${target.endTime}, ${target.filled} of ${target.slots} filled. Press Space to assign.`);
+  await expect(wrapper).toHaveCount(1);
   await page.keyboard.press("Space");
   await expect(live).toContainText(`Assigning ${person.name} to ${target.locationName}`);
 

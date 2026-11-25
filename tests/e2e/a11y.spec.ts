@@ -17,7 +17,7 @@ for (const role of ["manager", "worker"] as const) {
   });
 }
 
-for (const path of ["/system", "/"]) {
+for (const path of ["/", "/system", "/decisions"]) {
   test(`${path} has no axe violations`, async ({ page }) => {
     await page.goto(path);
     await expect(page.locator("h1")).toBeVisible();

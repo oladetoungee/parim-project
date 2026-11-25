@@ -21,16 +21,14 @@ export function rowLicence(item: StaffListItem, eventDate: string): RowLicence |
   return undefined;
 }
 
-/** "Ana Tamm, steward, SIA expires in 3 days, 47 hours this week, over the 48 hour limit" */
-export function staffLabel(item: StaffListItem, eventDate: string) {
-  const licence = rowLicence(item, eventDate);
-  const parts = [item.name, item.roleName];
-  if (licence?.status === "valid") parts.push("SIA valid");
-  if (licence?.status === "expired") parts.push("SIA expired");
-  if (licence?.status === "expiring") parts.push(`SIA expires in ${licence.daysLeft} ${licence.daysLeft === 1 ? "day" : "days"}`);
-  parts.push(`${item.hoursThisWeek} hours this week`);
-  if (item.hoursThisWeek > item.weeklyHourLimit) parts.push(`over the ${item.weeklyHourLimit} hour limit`);
-  return parts.join(", ");
+/** Column header over the staff list: hours are this week's, said once here instead of on every row. */
+export function StaffColumns() {
+  return (
+    <div aria-hidden="true" className="flex items-center justify-between border-b border-hairline px-4 py-2 text-12 leading-4 text-muted">
+      <span>Name and role</span>
+      <span>Hours this week</span>
+    </div>
+  );
 }
 
 type DraggableStaffProps = {
@@ -58,10 +56,9 @@ const DraggableStaff = memo(function DraggableStaff({ item, eventDate, dimmed, o
         {...listeners}
         onKeyDown={onKeyDown}
         aria-roledescription="draggable person"
-        aria-label={staffLabel(item, eventDate)}
         className={cn(
-          "block outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
-          "transition-opacity duration-quick",
+          "block outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring focus-visible:outline-solid",
+          "transition-opacity duration-quick ease-standard",
           (isDragging || dimmed) && "opacity-40",
         )}
       >
@@ -152,7 +149,10 @@ export function StaffPanel({
       ) : items && items.length === 0 ? (
         <p className="px-4 py-6 text-14 text-muted">No one matches &ldquo;{search}&rdquo;.</p>
       ) : (
-        <ul ref={listRef} aria-label="Staff" className="min-h-0 flex-1 overflow-y-auto">
+        <>
+        <StaffColumns />
+        {/* Padded so the 2px focus ring, offset 2px, isn't clipped by the scroll box. */}
+        <ul ref={listRef} aria-label="Staff" className="min-h-0 flex-1 overflow-y-auto px-1 pt-1 pb-2">
           {items?.map((item) => (
             <DraggableStaff
               key={item.id}
@@ -163,6 +163,7 @@ export function StaffPanel({
             />
           ))}
         </ul>
+        </>
       )}
     </aside>
   );

@@ -256,8 +256,8 @@ function EditShiftForm({ board, shift }: { board: Board; shift: BoardShift }) {
             }}
           />
         </Field>
-        <Field label="Notes">
-          <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Radio channel, meeting point" />
+        <Field label="Notes" hint="For example the radio channel or meeting point">
+          <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         </Field>
         {needsReason ? (
           <Field label="Reason for the override" hint="Saved in the shift's activity." required>
@@ -285,7 +285,8 @@ function EditShiftForm({ board, shift }: { board: Board; shift: BoardShift }) {
             ) : null}
           </div>
         ) : null}
-        <div className="flex justify-end">
+        {/* 24px before the action: the form's 16px gap plus 8. */}
+        <div className="mt-2 flex justify-end">
           <Button type="submit" variant="primary" loading={save.isPending}>
             {needsReason ? "Save anyway" : "Save changes"}
           </Button>

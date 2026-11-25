@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { cn } from "@/lib/cn";
 import { StatusDot } from "./Badge";
 import { CloseIcon } from "./icons";
+import { duration } from "./motion";
 
 export type ToastVariant = "success" | "error" | "undo";
 
@@ -52,8 +53,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const dismiss = useCallback((id: number) => {
     setItems((list) => list.map((t) => (t.id === id ? { ...t, open: false } : t)));
-    // Leave time for the exit animation before unmounting.
-    window.setTimeout(() => setItems((list) => list.filter((t) => t.id !== id)), 400);
+    // Unmount once the exit (toast-out, duration/quick) has played, plus a frame.
+    window.setTimeout(() => setItems((list) => list.filter((t) => t.id !== id)), duration("quick") + 16);
   }, []);
 
   const toast = useCallback((options: ToastOptions) => {
@@ -71,7 +72,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {items.map((item) => (
           <ToastCard key={item.id} item={item} onDismiss={() => dismiss(item.id)} />
         ))}
-        <ToastPrimitive.Viewport className="fixed right-0 bottom-0 z-[100] flex w-full max-w-[400px] flex-col gap-2 p-4 outline-none sm:p-6" />
+        <ToastPrimitive.Viewport className="fixed right-0 bottom-0 z-[100] flex w-full max-w-[400px] flex-col gap-2 p-4 outline-hidden sm:p-6" />
       </ToastPrimitive.Provider>
     </ToastContext.Provider>
   );

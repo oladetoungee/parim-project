@@ -4,9 +4,12 @@ import { useId, useMemo } from "react";
 import { Button } from "@/components/ui/Button";
 import type { Board, BoardShift } from "@/server/db/queries";
 import { capitalise, shiftSpan } from "./board-math";
-import { BoardShiftCard, idleView } from "./Timeline";
+import { BoardShiftCard } from "./Timeline";
 import type { Person } from "./useBoardWrites";
 
+/** Room the stub keeps for the Request shift button, and for the "Requested" note that replaces it. */
+const REQUEST_WIDTH = 112;
+const REQUESTED_WIDTH = 140;
 
 /** The worker's own name comes back on their own shifts; the server strips everyone else's. */
 export function workerIdentity(board: Board): Person | null {
@@ -68,7 +71,7 @@ export function WorkerPanel({ board, onOpen, onRequest }: WorkerPanelProps) {
           <ul className="flex flex-col gap-3">
             {mine.map((s) => (
               <li key={s.id}>
-                <BoardShiftCard shift={s} {...idleView} over={false} onOpen={onOpen} />
+                <BoardShiftCard shift={s} dimmed={false} selected={false} onOpen={onOpen} />
               </li>
             ))}
           </ul>
@@ -82,19 +85,36 @@ export function WorkerPanel({ board, onOpen, onRequest }: WorkerPanelProps) {
         {open.length === 0 ? (
           <p className="text-14 text-muted">Nothing open in your role that fits around your shifts.</p>
         ) : (
-          <ul className="flex flex-col gap-4">
+          <ul className="flex flex-col gap-3">
             {open.map((s) => {
               const requested = s.requests.some((r) => r.staffId === me?.id);
               return (
-                <li key={s.id} className="flex flex-col gap-2">
-                  <BoardShiftCard shift={s} {...idleView} over={false} onOpen={onOpen} />
+                <li key={s.id} className="relative">
+                  <BoardShiftCard
+                    shift={s}
+                    dimmed={false}
+                    selected={false}
+                    onOpen={onOpen}
+                    stubActionWidth={requested ? REQUESTED_WIDTH : REQUEST_WIDTH}
+                  />
+                  {/*
+                   * Laid over the ticket's stub, right aligned. A sibling of the
+                   * card's button, not a child: buttons can't nest.
+                   */}
                   {requested ? (
-                    <p className="text-14 text-ink">Requested. Waiting for a manager.</p>
+                    <p
+                      className="absolute right-[13px] bottom-[7px] flex h-8 flex-col items-end justify-center text-right text-12 leading-4 text-ink"
+                      style={{ width: REQUESTED_WIDTH }}
+                    >
+                      <span className="font-medium">Requested.</span>
+                      <span className="text-muted">Waiting for a manager.</span>
+                    </p>
                   ) : (
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="self-start"
+                      className="absolute right-[13px] bottom-[7px] bg-canvas px-0"
+                      style={{ width: REQUEST_WIDTH }}
                       onClick={() => onRequest(s)}
                       aria-label={`Request shift: ${capitalise(s.roleName)}, ${s.locationName} ${s.startTime} to ${s.endTime}`}
                     >

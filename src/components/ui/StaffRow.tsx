@@ -45,6 +45,21 @@ function licenceText(l: LicenceStatus) {
   return `SIA expires in ${l.daysLeft} ${l.daysLeft === 1 ? "day" : "days"}`;
 }
 
+/** "Ana Tamm, Steward, SIA expires in 3 days, 47 hours this week" */
+export function staffRowName({
+  name,
+  role,
+  licence,
+  hoursThisWeek,
+  maxHours = 48,
+}: Pick<StaffRowProps, "name" | "role" | "licence" | "hoursThisWeek" | "maxHours">) {
+  const parts = [name, role];
+  if (licence) parts.push(licenceText(licence));
+  parts.push(`${hoursThisWeek} hours this week`);
+  if (hoursThisWeek > maxHours) parts.push(`over the ${maxHours} hour limit`);
+  return parts.join(", ");
+}
+
 export function StaffRow({
   name,
   role,
@@ -64,28 +79,31 @@ export function StaffRow({
       className={cn(rowVariants({ state }), className)}
       {...props}
     >
-      <Avatar name={name} />
-      <span className="flex min-w-0 flex-1 flex-col">
+      {/*
+       * The row's accessible name is one visually hidden sentence that starts
+       * with what is on screen: "Ana Tamm, Steward, SIA valid, 24 hours this
+       * week". No aria-label, so nothing can drift from the visible text, and
+       * the visible parts are hidden from the name so it isn't read twice.
+       */}
+      <span className="sr-only">{staffRowName({ name, role, licence, hoursThisWeek, maxHours })}</span>
+      <Avatar name={name} decorative />
+      <span aria-hidden="true" className="flex min-w-0 flex-1 flex-col">
         <span className={cn("truncate text-14 leading-5 font-semibold", state === "disabled" ? "text-subtle" : "text-ink")}>
           {name}
         </span>
         <span className="flex min-w-0 items-center gap-1 text-12 leading-4 text-muted">
-          <span className="truncate">{role}</span>
-          {licence ? (
-            <>
-              <span aria-hidden="true">,</span>
-              <LicenceLabel licence={licence} />
-            </>
-          ) : null}
+          {/* The comma belongs to the role, so the gap falls after it: "Security, SIA valid". */}
+          <span className="truncate">
+            {role}
+            {licence ? "," : null}
+          </span>
+          {licence ? <LicenceLabel licence={licence} /> : null}
         </span>
       </span>
-      <span className="flex shrink-0 flex-col items-end">
-        <span className={cn("text-14 leading-5 font-medium tabular", over ? "text-short" : "text-ink")}>
-          {hoursThisWeek} h
-        </span>
-        <span className={cn("text-12 leading-4", over ? "font-medium text-short" : "text-muted")}>
-          {over ? `Over ${maxHours} h` : "This week"}
-        </span>
+      <span aria-hidden="true" className="flex shrink-0 flex-col items-end">
+        <span className={cn("text-14 leading-5 font-medium tabular", over ? "text-short" : "text-ink")}>{hoursThisWeek} h</span>
+        {/* "Hours this week" is the list's column header, so a row only adds a note when over. */}
+        {over ? <span className="text-12 leading-4 font-medium text-short">Over {maxHours} h</span> : null}
       </span>
     </div>
   );

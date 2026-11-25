@@ -40,42 +40,38 @@ export type CardView = {
 
 export const idleView: CardView = { drop: "none", dimmed: false, selected: false };
 
-type BoardShiftCardProps = CardView & {
+type BoardShiftCardProps = Pick<CardView, "dimmed" | "selected" | "clashStaffId"> & {
   shift: BoardShift;
-  /** Shows the reason above the card while it is the drop target. */
-  over: boolean;
   onOpen: (shiftId: number) => void;
+  /** Room kept in the stub for a control laid over it (the worker's Request shift). */
+  stubActionWidth?: number;
 };
+
+/** A person in the cache can be marked leaving: their face plays the exit before they are dropped. */
+type CachedPerson = BoardShift["assigned"][number] & { leaving?: boolean };
 
 /**
  * One shift on the board. Every prop is a primitive or the shift object,
  * which TanStack Query keeps by reference until that shift changes, so the
- * memo holds and a drop re-renders one card.
+ * memo holds and a drop re-renders one card. Drag state is not a prop: the
+ * droppable wrapper carries it as data-drop and CSS restyles the card.
  */
 export const BoardShiftCard = memo(function BoardShiftCard({
   shift,
-  drop,
-  dropReason,
   dimmed,
   selected,
   clashStaffId,
-  over,
   onOpen,
+  stubActionWidth,
 }: BoardShiftCardProps) {
-  const people = useMemo(() => shift.assigned.map((p) => ({ id: String(p.staffId), name: p.name })), [shift.assigned]);
+  const people = useMemo(
+    () => shift.assigned.map((p: CachedPerson) => ({ id: String(p.staffId), name: p.name, leaving: p.leaving })),
+    [shift.assigned],
+  );
   const clashStaffIds = useMemo(() => (clashStaffId === undefined ? undefined : [String(clashStaffId)]), [clashStaffId]);
   const conflict = clashStaffId !== undefined;
   return (
     <div className={cn("relative transition-opacity duration-quick ease-standard", dimmed && "opacity-30")}>
-      {over && drop === "invalid" && dropReason ? (
-        <span
-          role="tooltip"
-          className="motion-popover pointer-events-none absolute bottom-full left-0 z-30 mb-2 w-max max-w-72 rounded-2 bg-ink px-2 py-1 text-12 font-medium text-canvas shadow-lifted"
-          data-state="open"
-        >
-          {dropReason}
-        </span>
-      ) : null}
       <ShiftCard
         role={capitalise(shift.roleName)}
         location={shift.locationName}
@@ -85,12 +81,10 @@ export const BoardShiftCard = memo(function BoardShiftCard({
         needed={shift.slots}
         status={conflict ? "conflict" : cardStatus[shift.status]}
         people={people}
-        drop={drop}
-        // The reason shows in the tooltip above the card instead: printed inside
-        // every invalid card, it grew them all and shifted the board mid-drag.
         selected={selected}
         clashStaffIds={clashStaffIds}
         shake={conflict}
+        stubActionWidth={stubActionWidth}
         onClick={() => onOpen(shift.id)}
         className="w-full"
         data-shift-id={shift.id}
@@ -99,12 +93,33 @@ export const BoardShiftCard = memo(function BoardShiftCard({
   );
 });
 
-/** A card that accepts staff dropped on it. */
+/**
+ * A card that accepts staff dropped on it. It re-renders as a drag starts,
+ * moves and ends; the memoised card inside does not, because the drag state
+ * goes on this wrapper as data attributes. The reason a drop is blocked shows
+ * above the card while it is the target, instead of growing every card.
+ */
 function DroppableShift({ shift, view, onOpen, style }: { shift: BoardShift; view: CardView; onOpen: (id: number) => void; style: CSSProperties }) {
   const { setNodeRef, isOver } = useDroppable({ id: shiftDropId(shift.id) });
+  const dragging = view.drop !== "none";
   return (
-    <div ref={setNodeRef} style={style} className="min-w-0 pr-1">
-      <BoardShiftCard shift={shift} {...view} over={isOver} onOpen={onOpen} />
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="relative min-w-0 pr-1"
+      data-drop={dragging ? view.drop : undefined}
+      data-drop-over={dragging && isOver ? "" : undefined}
+    >
+      {isOver && view.drop === "invalid" && view.dropReason ? (
+        <span
+          role="tooltip"
+          className="motion-popover pointer-events-none absolute bottom-full left-0 z-30 mb-2 w-max max-w-72 rounded-2 bg-ink px-2 py-1 text-12 font-medium text-canvas shadow-lifted"
+          data-state="open"
+        >
+          {view.dropReason}
+        </span>
+      ) : null}
+      <BoardShiftCard shift={shift} dimmed={view.dimmed} selected={view.selected} clashStaffId={view.clashStaffId} onOpen={onOpen} />
     </div>
   );
 }

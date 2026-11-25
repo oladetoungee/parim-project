@@ -52,7 +52,7 @@ export function RoleSwitch({ role, onSwitched }: { role: Role | undefined; onSwi
 }
 
 const itemClass = cn(
-  "flex cursor-default flex-col gap-0.5 rounded-2 py-2 pr-3 pl-8 text-left outline-none select-none",
+  "flex cursor-default flex-col gap-0.5 rounded-2 py-2 pr-3 pl-8 text-left outline-hidden select-none",
   "data-[highlighted]:bg-hover",
 );
 

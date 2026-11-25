@@ -34,10 +34,23 @@ export function describeHour({ hour, needed, assigned }: HourCoverage) {
   return { range, detail, short };
 }
 
+/** "7 short, 14:00 to 15:00, 48 of 55 staff." Starts with the visible words, in the order they show. */
+export function hourLabel(h: HourCoverage) {
+  const { range, short } = describeHour(h);
+  if (h.needed === 0) return `${range}, no staff needed.`;
+  if (short > 0) return `${short} short, ${range}, ${h.assigned} of ${h.needed} staff.`;
+  return `${range}, ${h.assigned} of ${h.needed} staff, covered.`;
+}
+
 /*
- * Figma: Coverage strip. One bar per hour. The 1px outline is sized to the
- * need; inside it the assigned part sits at the bottom in data/assigned and
- * the shortfall shows in status/short above it. Covered hours carry no colour.
+ * Figma: Coverage strip. One bar per hour, its height sized to the need.
+ * The assigned part is solid data/assigned at the bottom. The shortfall is
+ * the rest of the bar, full height: a dashed status/short box with a
+ * short-tint fill, so a gap is the loudest thing on the strip. Covered hours
+ * carry no colour.
+ *
+ * The dashed box spans the whole need and the grey assigned part is drawn
+ * over its lower part with scaleY, so a change animates on transform only.
  * Each bar is a button: one tab stop for the strip, arrow keys between hours.
  * Keyboard focus draws the standard accent ring around the bar; the active
  * (hovered or focused) hour also gets a 2px ink border.
@@ -107,7 +120,7 @@ export function CoverageStrip({
               }}
               type="button"
               tabIndex={i === focusIndex ? 0 : -1}
-              aria-label={`${range}, ${detail}`}
+              aria-label={hourLabel(h)}
               aria-pressed={isActive}
               data-short={short > 0 || undefined}
               onFocus={() => {
@@ -116,7 +129,7 @@ export function CoverageStrip({
               }}
               onBlur={() => setActive(null)}
               onMouseEnter={() => setActive(h.hour)}
-              className="group/bar relative flex min-w-0 flex-col items-stretch focus:outline-none focus-visible:outline-none"
+              className="group/bar relative flex min-w-0 flex-col items-stretch outline-hidden focus-visible:outline-hidden"
             >
               {isActive ? (
                 <span
@@ -144,25 +157,28 @@ export function CoverageStrip({
                 </span>
                 <span
                   aria-hidden="true"
+                  data-part="bar"
                   className={cn(
-                    "relative block border border-need-outline",
-                    "group-focus-visible/bar:outline-2 group-focus-visible/bar:outline-offset-2 group-focus-visible/bar:outline-ring",
-                    short > 0 ? "bg-short" : "bg-transparent",
-                    h.needed === 0 && "border-hairline",
+                    "relative block",
+                    "group-focus-visible/bar:outline-2 group-focus-visible/bar:outline-offset-2 group-focus-visible/bar:outline-ring group-focus-visible/bar:outline-solid",
+                    h.needed === 0 && "border-t border-hairline",
                   )}
                   style={{ height: Math.max(needHeight, 2) }}
                 >
-                  <span className="absolute inset-0 overflow-hidden">
-                    <span
-                      className="absolute inset-0 origin-bottom bg-assigned transition-transform duration-base ease-standard motion-reduce:transition-none"
-                      style={{ transform: `scaleY(${ratio})` }}
-                    />
-                  </span>
+                  {short > 0 ? (
+                    <span data-part="short" className="absolute inset-0 border border-dashed border-short bg-short-tint" />
+                  ) : null}
+                  <span
+                    data-part="assigned"
+                    className="absolute inset-0 origin-bottom bg-assigned transition-transform duration-base ease-standard motion-reduce:transition-none"
+                    style={{ transform: `scaleY(${ratio})` }}
+                  />
                   {isActive ? (
                     <span className="pointer-events-none absolute -inset-px border-2 border-ink" data-active="true" />
                   ) : null}
                 </span>
               </span>
+              {/* Keeps "7 short" and "14:00" apart as words, the way the name has them. */}{" "}
               <span
                 aria-hidden="true"
                 className={cn(
@@ -183,12 +199,8 @@ export function CoverageStrip({
           Assigned
         </li>
         <li className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="size-2.5 bg-short" />
-          Short
-        </li>
-        <li className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="size-2.5 border border-need-outline" />
-          Needed
+          <span aria-hidden="true" className="size-2.5 border border-dashed border-short bg-short-tint" />
+          Short of what is needed
         </li>
       </ul>
     </div>

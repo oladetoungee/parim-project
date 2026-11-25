@@ -14,7 +14,8 @@ import {
   postAssignment,
   postShiftRequest,
 } from "./api";
-import { addPerson, confirmPerson, removePerson, shiftPlace } from "./board-math";
+import { afterMotion } from "@/components/ui/motion";
+import { addPerson, confirmPerson, removeLeaving, setLeaving, shiftPlace } from "./board-math";
 import { useDemoState } from "./demo-state";
 
 /** Every write shares this key, so a refetch waits until the last one settles. */
@@ -79,6 +80,18 @@ function patchBoard(qc: QueryClient, update: (board: Board) => Board) {
   qc.setQueryData<Board>(boardKey, (board) => (board ? update(board) : board));
 }
 
+/**
+ * Takes a person off a card the way they came on, in reverse: their face is
+ * marked leaving and slides back toward the staff panel (duration/base,
+ * easing/exit; a fade with reduced motion), then the cache drops them.
+ * Used for a rolled-back assign, an undo and a remove.
+ */
+async function playExit(qc: QueryClient, shiftId: number, staffId: number) {
+  patchBoard(qc, (b) => setLeaving(b, shiftId, staffId, true));
+  await afterMotion("base");
+  patchBoard(qc, (b) => removeLeaving(b, shiftId, staffId));
+}
+
 function errorDetails(error: unknown) {
   return error instanceof ApiError ? error : new ApiError(0, "unknown", "Something went wrong. Try again.");
 }
@@ -93,7 +106,7 @@ export function useBoardWrites({ onNeedsOverride, onBlocked }: Handlers) {
     mutationFn: (v: RemoveVars) => deleteAssignment(v.person.assignmentId, { flags, idempotencyKey: v.key }),
     onMutate: async (v) => {
       await qc.cancelQueries({ queryKey: boardKey });
-      patchBoard(qc, (b) => removePerson(b, v.shift.id, v.person.staffId));
+      await playExit(qc, v.shift.id, v.person.staffId);
     },
     onSuccess: (result, v) => {
       if (v.mode === "undo") {
@@ -163,43 +176,49 @@ export function useBoardWrites({ onNeedsOverride, onBlocked }: Handlers) {
           }),
       });
     },
-    onError: (raw, v) => {
-      patchBoard(qc, (b) => removePerson(b, v.shift.id, v.person.id));
-      const error = errorDetails(raw);
-      const breaks = error.details?.breaks ?? [];
-
-      if (error.code === "needs_override") {
-        onNeedsOverride({
-          breaks: warnings(breaks),
-          personName: v.person.name,
-          shift: v.shift,
-          confirm: (reason) => assign.mutate({ ...v, overrideReason: reason, key: newIdempotencyKey() }),
-        });
-        return;
-      }
-      if (error.code === "shift_full") {
-        const who = error.details?.takenBy?.name;
-        toast({
-          variant: "error",
-          title: who ? `${who} took the last place` : "Someone else took the last place",
-          description: `${shiftPlace(v.shift)} is full. The board has been refreshed.`,
-        });
-        return;
-      }
-      if (error.retryable) {
-        toast({
-          variant: "error",
-          title: `Couldn't assign ${v.person.name}`,
-          description: error.message,
-          onAction: () => assign.mutate(v),
-        });
-        return;
-      }
-      onBlocked(v.shift.id, v.person.id);
-      toast({ variant: "error", title: `Can't assign ${v.person.name}`, description: error.message });
+    // Awaited by TanStack Query before onSettled, so the refetch can't cut the exit short.
+    onError: async (raw, v) => {
+      const exit = playExit(qc, v.shift.id, v.person.id);
+      assignFailed(raw, v);
+      await exit;
     },
     onSettled: () => refreshWhenIdle(qc),
   });
+
+  function assignFailed(raw: unknown, v: AssignVars) {
+    const error = errorDetails(raw);
+    const breaks = error.details?.breaks ?? [];
+
+    if (error.code === "needs_override") {
+      onNeedsOverride({
+        breaks: warnings(breaks),
+        personName: v.person.name,
+        shift: v.shift,
+        confirm: (reason) => assign.mutate({ ...v, overrideReason: reason, key: newIdempotencyKey() }),
+      });
+      return;
+    }
+    if (error.code === "shift_full") {
+      const who = error.details?.takenBy?.name;
+      toast({
+        variant: "error",
+        title: who ? `${who} took the last place` : "Someone else took the last place",
+        description: `${shiftPlace(v.shift)} is full. The board has been refreshed.`,
+      });
+      return;
+    }
+    if (error.retryable) {
+      toast({
+        variant: "error",
+        title: `Couldn't assign ${v.person.name}`,
+        description: error.message,
+        onAction: () => assign.mutate(v),
+      });
+      return;
+    }
+    onBlocked(v.shift.id, v.person.id);
+    toast({ variant: "error", title: `Can't assign ${v.person.name}`, description: error.message });
+  }
 
   const approve = useMutation({
     mutationKey: WRITE_KEY,
@@ -223,8 +242,8 @@ export function useBoardWrites({ onNeedsOverride, onBlocked }: Handlers) {
           }),
       });
     },
-    onError: (raw, v) => {
-      patchBoard(qc, (b) => removePerson(b, v.shift.id, v.request.staffId));
+    onError: async (raw, v) => {
+      const exit = playExit(qc, v.shift.id, v.request.staffId);
       const error = errorDetails(raw);
       if (error.code === "needs_override") {
         onNeedsOverride({
@@ -241,6 +260,7 @@ export function useBoardWrites({ onNeedsOverride, onBlocked }: Handlers) {
         description: error.message,
         onAction: error.retryable ? () => approve.mutate(v) : undefined,
       });
+      await exit;
     },
     onSettled: () => refreshWhenIdle(qc),
   });

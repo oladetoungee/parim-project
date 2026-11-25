@@ -230,9 +230,27 @@
   }
 }
 
-@keyframes skeleton-pulse {
-  50% {
-    opacity: 0.5;
+/* A face joining a shift: scale up with the drop spring. */
+@keyframes face-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+/* A face leaving a shift (rollback, undo): back toward the staff panel on the right. */
+@keyframes face-out {
+  to {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+/* The new count number rolls up into its clipped box. */
+@keyframes tick-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
   }
 }
 
@@ -290,8 +308,31 @@
   animation: shake var(--duration-slow) var(--easing-standard) both;
 }
 
-.motion-skeleton {
-  animation: skeleton-pulse 1.6s var(--easing-standard) infinite;
+.motion-face-in {
+  animation: face-in var(--duration-slow) var(--easing-spring) both;
+}
+
+.motion-face-out {
+  animation: face-out var(--duration-base) var(--easing-exit) both;
+}
+
+/* The count's number. The parent is an inline box with overflow clipped. */
+.motion-tick {
+  display: inline-block;
+  animation: tick-in var(--duration-quick) var(--easing-enter) both;
+}
+
+/* Badge word change: the old word fades out under the new one. */
+.motion-crossfade-in {
+  animation: fade-in var(--duration-quick) var(--easing-enter) both;
+}
+.motion-crossfade-out {
+  animation: fade-out var(--duration-quick) var(--easing-exit) both;
+}
+
+/* The picked-up staff row. Its tilt follows the drag direction (rotate is set inline). */
+.motion-lift {
+  transition: rotate var(--duration-quick) var(--easing-standard);
 }
 
 /* Sliding indicators (tabs, segmented control). Positioned with transform. */
@@ -302,7 +343,7 @@
 
 /*
  * Reduced motion: movement becomes opacity. Transforms jump, fades stay.
- * Indicators jump. Shake becomes the outline alone. Skeletons hold still.
+ * Indicators jump. Shake becomes the outline alone. Faces and counts fade.
  */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -324,14 +365,101 @@
     animation: fade-out var(--duration-quick) linear both;
   }
 
-  .motion-shake,
-  .motion-skeleton {
+  .motion-shake {
     animation: none;
+  }
+
+  /* Faces and counts change with a fade instead of moving. */
+  .motion-face-in,
+  .motion-tick {
+    animation: fade-in var(--duration-quick) linear both;
+  }
+  .motion-face-out {
+    animation: fade-out var(--duration-base) linear both;
   }
 
   .motion-lift {
     transform: none !important;
     translate: none !important;
     rotate: none !important;
+  }
+}
+
+/* ---------- Shift card: drag states ----------
+ *
+ * While a person is dragged, the droppable wrapper around each card carries
+ * data-drop="valid" or "invalid" (and data-drop-over on the current target).
+ * The card itself takes no drag props, so starting or ending a drag does not
+ * re-render any of the 42 memoised cards; these rules restyle them instead.
+ * Unlayered, so they win over the card's Tailwind utilities.
+ */
+[data-drop="valid"] .ticket {
+  --line: var(--accent-default);
+  --line-w: 2px;
+  border-style: dashed;
+  background-color: color-mix(in srgb, var(--accent-default) 5%, var(--bg-canvas));
+}
+[data-drop="valid"] .ticket-ring {
+  display: block;
+  border-style: dashed;
+}
+/*
+ * Only the seats and faces fade, to 35%. Text keeps full contrast: the
+ * initials inside a faded face would fall below AA, so on an invalid target
+ * the faces show as plain circles, and "+N" is not faded.
+ */
+[data-drop="invalid"] .ticket-seat {
+  opacity: 0.35;
+}
+[data-drop="invalid"] .ticket-seat .face-initials {
+  visibility: hidden;
+}
+/* The target the person is over right now: a solid 2px cobalt outline. */
+[data-drop-over] .ticket-button {
+  outline: 2px solid var(--accent-default);
+  outline-offset: 2px;
+}
+
+/* ---------- Shift card: head layout ----------
+ *
+ * Wide: role and "2 of 4" on line 1, time on line 2.
+ * Under 150px (two-hour shifts are about 104px inside): role on line 1, then
+ * "1 of 3" and the time at 12px. At that width "1 of 3 14:00–16:00" doesn't
+ * fit on one line (about 106px of text in 80px), so the time takes a third
+ * line and the tear line moves down 16px with it. The container is the
+ * card's button, so the ticket's own --tear can change here.
+ */
+.ticket-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "role count"
+    "time time";
+  column-gap: 8px;
+}
+.ticket-head > [data-part="role"] {
+  grid-area: role;
+}
+.ticket-head > [data-part="count"] {
+  grid-area: count;
+}
+.ticket-head > [data-part="time"] {
+  grid-area: time;
+}
+@container (max-width: 149.98px) {
+  .ticket {
+    --tear: 71px;
+  }
+  .ticket-head {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "role"
+      "count"
+      "time";
+  }
+  .ticket-head > [data-part="count"] {
+    justify-self: start;
+    font-size: 0.75rem;
+    line-height: 1rem;
   }
 }

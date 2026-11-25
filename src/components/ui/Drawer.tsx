@@ -27,7 +27,7 @@ export function DrawerContent({ title, description, children, footer, className 
       <Dialog.Overlay className="motion-overlay fixed inset-0 z-40 bg-scrim" />
       <Dialog.Content
         className={cn(
-          "motion-drawer fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] flex-col border-l border-hairline bg-raised shadow-lifted outline-none",
+          "motion-drawer fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] flex-col border-l border-hairline bg-raised shadow-lifted outline-hidden",
           className,
         )}
       >
