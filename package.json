@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run --project unit",
+    "test": "vitest run --project unit --project component",
     "test:int": "vitest run --project integration",
     "e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
