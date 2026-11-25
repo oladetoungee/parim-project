@@ -1,26 +1,322 @@
 @import "tailwindcss";
+@import "../styles/tokens.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Dark mode is driven by data-theme on <html>, never by the OS alone. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/*
+ * Tailwind theme mapped onto the tokens. The default palette, type scale,
+ * radii and shadows are cleared so only system values exist as classes.
+ * Spacing keeps Tailwind's 4px multiplier: p-1 4, p-2 8, p-3 12, p-4 16,
+ * p-6 24, p-8 32, p-12 48, p-16 64.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-canvas);
+  --color-paper: var(--bg-paper);
+  --color-raised: var(--bg-raised);
+  --color-hover: var(--bg-hover);
+  --color-pressed: var(--bg-pressed);
+  --color-scrim: var(--bg-scrim);
+
+  --color-hairline: var(--border-hairline);
+  --color-strong: var(--border-strong);
+
+  --color-ink: var(--text-primary);
+  --color-muted: var(--text-muted);
+  --color-subtle: var(--text-subtle);
+
+  --color-accent: var(--accent-default);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-on: var(--accent-on);
+  --color-accent-tint: var(--accent-tint);
+
+  --color-covered: var(--status-covered);
+  --color-covered-tint: var(--status-covered-tint);
+  --color-short: var(--status-short);
+  --color-short-tint: var(--status-short-tint);
+  --color-conflict: var(--status-conflict);
+  --color-conflict-tint: var(--status-conflict-tint);
+  --color-open: var(--status-open);
+  --color-draft: var(--status-draft);
+
+  --color-assigned: var(--data-assigned);
+  --color-need-outline: var(--data-need-outline);
+
+  --color-ring: var(--focus-ring);
+
+  --font-*: initial;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter-tight), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --text-*: initial;
+  --text-12: 0.75rem;
+  --text-12--line-height: 1rem;
+  --text-14: 0.875rem;
+  --text-14--line-height: 1.25rem;
+  --text-16: 1rem;
+  --text-16--line-height: 1.5rem;
+  --text-20: 1.25rem;
+  --text-20--line-height: 1.75rem;
+  --text-24: 1.5rem;
+  --text-24--line-height: 1.875rem;
+  --text-32: 2rem;
+  --text-32--line-height: 2.25rem;
+  --text-48: 3rem;
+  --text-48--line-height: 3.125rem;
+  --text-72: 4.5rem;
+  --text-72--line-height: 4.5rem;
+
+  --radius-*: initial;
+  --radius-2: 2px;
+  --radius-4: 4px;
+  --radius-8: 8px;
+
+  --shadow-*: initial;
+  --shadow-lifted: var(--elevation-lifted);
+
+  --transition-duration-instant: var(--duration-instant);
+  --transition-duration-quick: var(--duration-quick);
+  --transition-duration-base: var(--duration-base);
+  --transition-duration-slow: var(--duration-slow);
+
+  --ease-*: initial;
+  --ease-standard: var(--easing-standard);
+  --ease-enter: var(--easing-enter);
+  --ease-exit: var(--easing-exit);
+  --ease-spring: var(--easing-spring);
+
+  --animate-fade-in: fade-in var(--duration-quick) var(--easing-enter) both;
+  --animate-fade-out: fade-out var(--duration-quick) var(--easing-exit) both;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: var(--accent-tint);
+    color: var(--text-primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Tabular figures for times and counts */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Focus ring as a utility for elements that need it on a wrapper */
+@utility focus-ring {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ---------- Keyframes. Only transform and opacity. ---------- */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes drawer-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* Two 4px horizontal shakes */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ---------- Component motion hooks ---------- */
+
+.motion-toast[data-state="open"] {
+  animation: toast-in var(--duration-base) var(--easing-enter) both;
+}
+.motion-toast[data-state="closed"] {
+  animation: toast-out var(--duration-quick) var(--easing-exit) both;
+}
+.motion-toast[data-swipe="move"] {
+  transform: translateX(var(--radix-toast-swipe-move-x));
+}
+.motion-toast[data-swipe="cancel"] {
+  transform: translateX(0);
+  transition: transform var(--duration-quick) var(--easing-standard);
+}
+.motion-toast[data-swipe="end"] {
+  animation: fade-out var(--duration-quick) var(--easing-exit) both;
+}
+
+.motion-countdown {
+  transform-origin: left center;
+  animation: countdown var(--countdown, 5000ms) linear both;
+}
+.motion-countdown[data-paused="true"] {
+  animation-play-state: paused;
+}
+
+.motion-drawer[data-state="open"] {
+  animation: drawer-in var(--duration-slow) var(--easing-enter) both;
+}
+.motion-drawer[data-state="closed"] {
+  animation: drawer-out var(--duration-base) var(--easing-exit) both;
+}
+
+.motion-overlay[data-state="open"] {
+  animation: fade-in var(--duration-base) var(--easing-enter) both;
+}
+.motion-overlay[data-state="closed"] {
+  animation: fade-out var(--duration-quick) var(--easing-exit) both;
+}
+
+.motion-popover[data-state="open"],
+.motion-popover[data-state="delayed-open"],
+.motion-popover[data-state="instant-open"] {
+  animation: fade-in var(--duration-quick) var(--easing-enter) both;
+}
+.motion-popover[data-state="closed"] {
+  animation: fade-out var(--duration-instant) var(--easing-exit) both;
+}
+
+.motion-shake {
+  animation: shake var(--duration-slow) var(--easing-standard) both;
+}
+
+.motion-skeleton {
+  animation: skeleton-pulse 1.6s var(--easing-standard) infinite;
+}
+
+/* Sliding indicators (tabs, segmented control). Positioned with transform. */
+.motion-indicator {
+  transition:
+    transform var(--duration-base) var(--easing-standard);
+}
+
+/*
+ * Reduced motion: movement becomes opacity. Transforms jump, fades stay.
+ * Indicators jump. Shake becomes the outline alone. Skeletons hold still.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    scroll-behavior: auto !important;
+  }
+
+  .motion-indicator {
+    transition: none;
+  }
+
+  .motion-toast[data-state="open"],
+  .motion-drawer[data-state="open"] {
+    animation: fade-in var(--duration-quick) linear both;
+  }
+  .motion-toast[data-state="closed"],
+  .motion-drawer[data-state="closed"] {
+    animation: fade-out var(--duration-quick) linear both;
+  }
+
+  .motion-shake,
+  .motion-skeleton {
+    animation: none;
+  }
+
+  .motion-lift {
+    transform: none !important;
+    translate: none !important;
+    rotate: none !important;
+  }
 }
