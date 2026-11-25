@@ -185,7 +185,7 @@ function Gallery() {
         </Row>
       </Section>
 
-      <Section title="Shift card" note="A ticket: head, tear line, then one place per slot. Status, then interaction states, then overflow at 240, 176 and 108 wide. Under 150px the role, the count and the time each take a line, and the status word moves to the accessible name.">
+      <Section title="Shift card" note="Every place on a shift is a seat: a face when filled, a dashed circle when open. The bottom edge repeats it, one segment per place, amber where a place is open, so shifts with gaps stand out across a full board. A conflict turns the border red and rings the person who clashes. A draft has a dashed border. Rows show status, then interaction states, then overflow at 240, 176 and 108 wide. Under 200px the status word moves to the accessible name, and under 150px the role, the count and the time each take a line.">
         <Row>
           <ShiftCard role="Steward" location="Gate A" start="10:00" end="16:00" filled={0} needed={4} status="open" />
           <ShiftCard role="Steward" location="Gate A" start="10:00" end="16:00" filled={2} needed={4} status="partly-filled" people={people.slice(0, 2)} />

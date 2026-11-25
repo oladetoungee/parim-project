@@ -8,7 +8,7 @@ afterEach(cleanup);
 const base = { role: "Steward", start: "10:00", end: "16:00", needed: 4 } as const;
 
 /** The face circle around a person's initials. */
-const face = (initials: string) => screen.getByText(initials).closest(".ticket-seat");
+const face = (initials: string) => screen.getByText(initials).closest(".shift-card-seat");
 
 const cases: { status: ShiftStatus; filled: number; label: string }[] = [
   { status: "open", filled: 0, label: "Open" },
@@ -59,10 +59,25 @@ describe("ShiftCard", () => {
     expect(container.querySelectorAll(".border-dashed.rounded-full.size-6")).toHaveLength(2);
   });
 
-  it("shows +N past five places, and +N past three for narrow cards", () => {
+  it("shows +N past four places, and +N past three for narrow cards", () => {
     render(<ShiftCard {...base} needed={8} status="open" filled={0} />);
-    expect(screen.getByText("+3")).toBeInTheDocument();
+    expect(screen.getByText("+4")).toBeInTheDocument();
     expect(screen.getByText("+5")).toBeInTheDocument();
+  });
+
+  it("draws a hidden baseline with one segment per place, amber where open", () => {
+    const { container } = render(<ShiftCard {...base} status="partly-filled" filled={2} />);
+    const baseline = container.querySelector(".shift-card-baseline");
+    expect(baseline).toHaveAttribute("aria-hidden", "true");
+    expect(baseline?.querySelectorAll(".bg-assigned")).toHaveLength(2);
+    expect(baseline?.querySelectorAll(".bg-short")).toHaveLength(2);
+  });
+
+  it("caps the baseline at 12 segments and keeps an open one amber", () => {
+    const { container } = render(<ShiftCard {...base} needed={20} status="partly-filled" filled={19} />);
+    const baseline = container.querySelector(".shift-card-baseline");
+    expect(baseline?.children).toHaveLength(12);
+    expect(baseline?.querySelectorAll(".bg-short")).toHaveLength(1);
   });
 
   it("rings the clashing person in conflict colour and names them", () => {

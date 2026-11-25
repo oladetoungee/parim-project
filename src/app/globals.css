@@ -146,21 +146,6 @@
   outline-offset: 2px;
 }
 
-/*
- * Shift card ticket: two 14px half-circle notches cut into the side edges at
- * the tear line, so the page shows through. --tear is the tear line's distance
- * from the top of the border box. The notch strokes are separate elements.
- */
-@utility ticket-mask {
-  --tear: 55px;
-  -webkit-mask:
-    radial-gradient(circle at 0 var(--tear), #0000 7px, #000 7.5px) left / 51% 100% no-repeat,
-    radial-gradient(circle at 100% var(--tear), #0000 7px, #000 7.5px) right / 51% 100% no-repeat;
-  mask:
-    radial-gradient(circle at 0 var(--tear), #0000 7px, #000 7.5px) left / 51% 100% no-repeat,
-    radial-gradient(circle at 100% var(--tear), #0000 7px, #000 7.5px) right / 51% 100% no-repeat;
-}
-
 /* ---------- Keyframes. Only transform and opacity. ---------- */
 
 @keyframes fade-in {
@@ -393,71 +378,69 @@
  * re-render any of the 42 memoised cards; these rules restyle them instead.
  * Unlayered, so they win over the card's Tailwind utilities.
  */
-[data-drop="valid"] .ticket {
+[data-drop="valid"] .shift-card-surface {
   --line: var(--accent-default);
-  --line-w: 2px;
   border-style: dashed;
   background-color: color-mix(in srgb, var(--accent-default) 5%, var(--bg-canvas));
 }
-[data-drop="valid"] .ticket-ring {
+[data-drop="valid"] .shift-card-ring {
   display: block;
   border-style: dashed;
 }
 /*
- * Only the seats and faces fade, to 35%. Text keeps full contrast: the
- * initials inside a faded face would fall below AA, so on an invalid target
- * the faces show as plain circles, and "+N" is not faded.
+ * Only the seats, faces and baseline fade, to 35%. Text keeps full contrast:
+ * the initials inside a faded face would fall below AA, so on an invalid
+ * target the faces show as plain circles, and "+N" is not faded.
  */
-[data-drop="invalid"] .ticket-seat {
+[data-drop="invalid"] .shift-card-seat,
+[data-drop="invalid"] .shift-card-baseline {
   opacity: 0.35;
 }
-[data-drop="invalid"] .ticket-seat .face-initials {
+[data-drop="invalid"] .shift-card-seat .face-initials {
   visibility: hidden;
 }
 /* The target the person is over right now: a solid 2px cobalt outline. */
-[data-drop-over] .ticket-button {
+[data-drop-over] .shift-card {
   outline: 2px solid var(--accent-default);
   outline-offset: 2px;
 }
 
 /* ---------- Shift card: head layout ----------
  *
- * Wide: role and "2 of 4" on line 1, time on line 2.
+ * Wide: role and "2 of 4" on line 1, time on line 2, 4px apart.
  * Under 150px (two-hour shifts are about 104px inside): role on line 1, then
  * "1 of 3" and the time at 12px. At that width "1 of 3 14:00–16:00" doesn't
  * fit on one line (about 106px of text in 80px), so the time takes a third
- * line and the tear line moves down 16px with it. The container is the
- * card's button, so the ticket's own --tear can change here.
+ * line. The container is the card's button.
  */
-.ticket-head {
+.shift-card-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     "role count"
     "time time";
   column-gap: 8px;
+  row-gap: 4px;
 }
-.ticket-head > [data-part="role"] {
+.shift-card-head > [data-part="role"] {
   grid-area: role;
 }
-.ticket-head > [data-part="count"] {
+.shift-card-head > [data-part="count"] {
   grid-area: count;
 }
-.ticket-head > [data-part="time"] {
+.shift-card-head > [data-part="time"] {
   grid-area: time;
 }
 @container (max-width: 149.98px) {
-  .ticket {
-    --tear: 71px;
-  }
-  .ticket-head {
+  .shift-card-head {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "role"
       "count"
       "time";
+    row-gap: 0;
   }
-  .ticket-head > [data-part="count"] {
+  .shift-card-head > [data-part="count"] {
     justify-self: start;
     font-size: 0.75rem;
     line-height: 1rem;
