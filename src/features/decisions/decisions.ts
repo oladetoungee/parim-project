@@ -30,7 +30,7 @@ export const decisions: Decision[] = [
     cost: "One more band above the board. I kept it under 130px tall.",
   },
   {
-    title: "Each shift is a ticket with a seat per person",
+    title: "A seat for every place on a shift",
     problem:
       "The first card the agents built marked status with a coloured stripe down the left edge. It says something is wrong without saying what, and it shows up in a lot of generated UI.",
     options: [
@@ -44,8 +44,8 @@ export const decisions: Decision[] = [
       "A status dot before the role",
     ],
     choice:
-      "I drew these eight in Figma and combined the empty places with the ticket. The head holds the role, count and time. Below a tear line, every place is a seat: a face when filled, a dashed circle when open. A short shift visibly has empty seats.",
-    cost: "Cards are 8px taller, so the full board is longer.",
+      "I drew these eight in Figma, then laid each one out across a real row of the board. Every place is a seat: a face when filled, a dashed circle when open. The bottom edge repeats it with one segment per place, grey when filled and amber when open, so shifts with gaps are the only ones that catch the eye. I first picked the ticket, built it, and dropped it once I saw 42 of them together: the tear lines made the board busy.",
+    cost: "Two signals for one fact. I kept both because the seats say who is missing and the edge is visible from across the board.",
   },
   {
     title: "Drag and drop, with every step on the keyboard",
@@ -132,7 +132,7 @@ export const aiNote = {
   title: "How I used AI",
   paragraphs: [
     "I built ParimShift in one night with Claude Code. Builder agents wrote the design system, the API and the board in parallel. Separate critic agents, which hadn't seen the build, reviewed design, motion, the API and copy, and scored each piece out of 10. I sent back anything under 8.",
-    "I decided the scope, the name, the design direction from my own reference boards, the ticket card out of eight options, and every trade-off on this page.",
+    "I decided the scope, the name, the design direction from my own reference boards, the shift card out of eight options, and every trade-off on this page.",
     "The critics caught things I would have shipped. The first board design showed 19:00 as fully covered while Gate A had an empty 19:00 to 23:00 shift. A worker could read who took the last place from an error message. Editing a shift's times could double-book someone already on it. A retry after a dropped connection could report failure for a write that had worked.",
     "I turned down the agents' coloured-stripe card, a line explaining why each card was greyed out during a drag, and a red danger button, because red already meant conflict.",
   ],
