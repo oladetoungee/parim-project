@@ -475,7 +475,7 @@ export function BoardScreen() {
         </div>
         {/*
          * No drop animation on the overlay: on a valid drop the face springs
-         * into the ticket instead (ShiftCard), and flying the row back to the
+         * into the card instead (ShiftCard), and flying the row back to the
          * panel would read as a failed drop.
          */}
         <DragOverlay dropAnimation={null}>

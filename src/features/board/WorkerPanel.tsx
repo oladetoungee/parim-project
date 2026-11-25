@@ -98,12 +98,12 @@ export function WorkerPanel({ board, onOpen, onRequest }: WorkerPanelProps) {
                     stubActionWidth={requested ? REQUESTED_WIDTH : REQUEST_WIDTH}
                   />
                   {/*
-                   * Laid over the ticket's stub, right aligned. A sibling of the
+                   * Laid over the card's bottom row, right aligned. A sibling of the
                    * card's button, not a child: buttons can't nest.
                    */}
                   {requested ? (
                     <p
-                      className="absolute right-[13px] bottom-[7px] flex h-8 flex-col items-end justify-center text-right text-12 leading-4 text-ink"
+                      className="absolute right-[13px] bottom-[9px] flex h-8 flex-col items-end justify-center text-right text-12 leading-4 text-ink"
                       style={{ width: REQUESTED_WIDTH }}
                     >
                       <span className="font-medium">Requested.</span>
@@ -113,7 +113,7 @@ export function WorkerPanel({ board, onOpen, onRequest }: WorkerPanelProps) {
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="absolute right-[13px] bottom-[7px] bg-canvas px-0"
+                      className="absolute right-[13px] bottom-[9px] bg-canvas px-0"
                       style={{ width: REQUEST_WIDTH }}
                       onClick={() => onRequest(s)}
                       aria-label={`Request shift: ${capitalise(s.roleName)}, ${s.locationName} ${s.startTime} to ${s.endTime}`}

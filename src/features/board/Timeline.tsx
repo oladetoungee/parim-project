@@ -137,7 +137,7 @@ type LocationRowProps = {
 /**
  * One location. Shifts sit on a 64 column grid (15 minutes each, 14px, so
  * 56px an hour) and are packed into lanes. Grid placement rather than
- * absolute top offsets, so a lane grows to fit the ticket whatever its height.
+ * absolute top offsets, so a lane grows to fit the card whatever its height.
  */
 export function LocationRow({ name, covered, total, shifts, views, onOpen }: LocationRowProps) {
   const { lanes, ordered } = useMemo(() => packLanes(shifts), [shifts]);
@@ -179,7 +179,7 @@ export function LocationRow({ name, covered, total, shifts, views, onOpen }: Loc
 /**
  * Hour gridlines and the "now" line, drawn once behind every location row.
  * Both sit under the cards, so the line reads through the gaps without
- * striking through a ticket.
+ * striking through a card.
  */
 export function TimelineGrid({ children }: { children: ReactNode }) {
   const nowX = timeToX(toMinutes(DEMO_NOW));
