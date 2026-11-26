@@ -2,7 +2,6 @@ import Link from "next/link";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { TopBar } from "@/features/shell/TopBar";
-import { BoardSummary } from "@/features/landing/BoardSummary";
 import { FIGMA_URL, PORTFOLIO_URL, REPO_URL, chapters, closing, intro } from "@/features/landing/story";
 
 const VIDEO = "/parimshift-demo.mp4";
@@ -12,7 +11,7 @@ const hasVideo = existsSync(path.join(process.cwd(), "public", VIDEO));
 const starts = [
   { href: "/board", title: "Board", text: "Staff the race day yourself." },
   { href: "/system", title: "System", text: "Every component, in every state." },
-  { href: "/decisions", title: "Decisions", text: "What I chose and what it cost." },
+  { href: "/decisions", title: "Decisions", text: "Decisions made, trade-offs and costs." },
   { href: FIGMA_URL, title: "Figma", text: "The design system and the board." },
 ];
 
@@ -42,23 +41,20 @@ export default function Home() {
       <main className="mx-auto w-full max-w-[1120px] px-4 pt-16 pb-12 md:px-8 md:pt-24">
         <header className="max-w-[760px]">
           <h1 className="font-display text-48 leading-[3.125rem] tracking-[-0.03em] text-ink md:text-72 md:leading-[4.5rem]">
-            <span className="font-bold">Hi Parim.</span>{" "}
-            <span className="font-light">I built you something.</span>
+            <span className="font-bold">Hi Parim,</span>{" "}
+            <span className="font-light">I&apos;m Gbemisola.</span>
           </h1>
           <div className="mt-8 space-y-4 text-16 text-ink md:text-20 md:leading-8">
             {intro.map((p) => (
               <p key={p}>{p}</p>
             ))}
           </div>
-          <p className="mt-6">
-            <BoardSummary />
-          </p>
         </header>
 
         {hasVideo ? (
-          <section aria-labelledby="film-heading" className="mt-16">
+          <section aria-labelledby="film-heading" className="mt-10">
             <h2 id="film-heading" className="text-14 font-medium text-muted">
-              The whole thing in 100 seconds (with jazz in the background, because I love jazz)
+              A 100 second demo, with jazz in the background because I like jazz 🎷
             </h2>
             <video
               className="mt-3 w-full rounded-8 border border-hairline bg-paper"
@@ -146,7 +142,7 @@ export default function Home() {
         </section>
       </main>
       <footer className="mx-auto w-full max-w-[1120px] px-4 pb-8 text-14 text-muted md:px-8">
-        An unofficial concept by Gbemisola Oladetoun for Parim
+        By Gbemisola Oladetoun for Parim
       </footer>
     </div>
   );

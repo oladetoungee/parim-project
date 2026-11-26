@@ -23,13 +23,9 @@ export default function DecisionsPage() {
         <header className="max-w-[720px]">
           <h1 className="font-display text-48 tracking-[-0.03em] text-ink md:text-72">
             <span className="font-bold">Decisions</span>
-            <span className="font-light"> and what they cost</span>
+            <span className="font-light"> I made, trade-offs and costs</span>
           </h1>
-          <p className="mt-6 text-16 text-muted">
-            I built ParimShift for the Senior Full-Stack Engineer role at Parim. It is one slice of a
-            scheduling product: staffing a race day with 42 shifts across six locations. Each card below has
-            the problem, the options, my choice and its cost.
-          </p>
+          <p className="mt-6 text-16 text-muted">Each card below has the problem, the options, my choice and its cost.</p>
         </header>
 
         <section aria-labelledby="decisions-heading" className="mt-20">
@@ -108,7 +104,7 @@ export default function DecisionsPage() {
         </section>
 
         <footer className="flex flex-col gap-2 border-t border-hairline pt-8 text-14 text-muted md:flex-row md:justify-between">
-          <p>An unofficial concept by Gbemisola Oladetoun for Parim</p>
+          <p>By Gbemisola Oladetoun for Parim</p>
           <p className="flex gap-6">
             <a className="underline underline-offset-4 hover:text-ink" href={REPO_URL}>
               Code on GitHub
