@@ -28,13 +28,13 @@
   --ink-muted: #a3a09a;
   --ink-text: #ede9e2;
 
-  /* Primitives: cobalt */
-  --cobalt-700: #1532b5;
-  --cobalt-600: #1b3fd8;
-  --cobalt-50: #eef1fd;
-  --cobalt-300: #7b93ff;
-  --cobalt-200: #9aacff;
-  --cobalt-950: #1c2236;
+  /* Primitives: Parim blue. 400 is the brand blue from Parim's logo; 600 and 700 are deeper shades that pass AA as text on white. */
+  --blue-700: #005a88;
+  --blue-600: #006fa8;
+  --blue-50: #e8f6fe;
+  --blue-400: #33baff;
+  --blue-300: #66ccff;
+  --blue-950: #0b2433;
 
   /* Primitives: status */
   --green-700: #1d6b3a;
@@ -68,10 +68,10 @@
   --text-subtle: var(--stone-500); /* 4.66 on canvas: placeholder and disabled */
 
   /* Semantic: accent */
-  --accent-default: var(--cobalt-600); /* 7.64 on canvas, 6.83 on paper */
-  --accent-hover: var(--cobalt-700); /* primary button hover. 9.74 on canvas; accent/on on it 9.74 */
+  --accent-default: var(--blue-600); /* 5.47 on canvas, 4.89 on paper */
+  --accent-hover: var(--blue-700); /* primary button hover. 7.45 on canvas; accent/on on it 7.45 */
   --accent-on: var(--white); /* 7.64 on accent/default */
-  --accent-tint: var(--cobalt-50); /* accent/default on tint 6.78 */
+  --accent-tint: var(--blue-50); /* accent/default on tint 4.96 */
 
   /* Semantic: status. Always paired with a text label. */
   --status-covered: var(--green-700); /* 6.53 on canvas */
@@ -136,10 +136,10 @@
   --text-muted: var(--ink-muted); /* 7.23 on canvas, 6.65 on raised */
   --text-subtle: var(--ink-subtle); /* 5.40 on canvas, 4.97 on raised: placeholder and disabled */
 
-  --accent-default: var(--cobalt-300); /* 6.70 on canvas, 6.16 on raised */
-  --accent-hover: var(--cobalt-200); /* 8.72 on canvas; accent/on on it 8.72 */
+  --accent-default: var(--blue-400); /* 8.62 on canvas, 7.93 on raised */
+  --accent-hover: var(--blue-300); /* 10.45 on canvas; accent/on on it 10.45 */
   --accent-on: var(--ink); /* 6.70 on accent/default */
-  --accent-tint: var(--cobalt-950); /* accent/default on tint 5.60 */
+  --accent-tint: var(--blue-950); /* accent/default on tint 7.31 */
 
   --status-covered: var(--green-400); /* 8.49 on canvas, 7.81 on raised */
   --status-covered-tint: var(--green-950); /* covered on tint 6.40 */

@@ -31,7 +31,7 @@ export const chapters: Chapter[] = [
     title: "Designing first",
     paragraphs: [
       "Before code, I set up a design system in Figma: a calm, typographic look with a strict grid, a bold and a light weight of the same typeface, flat colour and plenty of white space, because a scheduling tool gets looked at for hours.",
-      "Every colour, size, spacing step, radius and motion timing is a Figma variable, and the same names exist as CSS variables in the code. Light and dark are two modes of the same variables, so the whole file and the whole app switch with one setting. Cobalt is the only accent. Red means a conflict, so nobody misses a real one.",
+      "Every colour, size, spacing step, radius and motion timing is a Figma variable, and the same names exist as CSS variables in the code. Light and dark are two modes of the same variables, so the whole file and the whole app switch with one setting. Parim's blue is the only accent. Red means a conflict, so nobody misses a real one.",
     ],
     points: [
       "Foundations: colour, type, space, radius, elevation and motion as variables",

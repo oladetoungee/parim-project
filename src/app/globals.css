@@ -399,7 +399,7 @@
 [data-drop="invalid"] .shift-card-seat .face-initials {
   visibility: hidden;
 }
-/* The target the person is over right now: a solid 2px cobalt outline. */
+/* The target the person is over right now: a solid 2px accent outline. */
 [data-drop-over] .shift-card {
   outline: 2px solid var(--accent-default);
   outline-offset: 2px;

@@ -101,10 +101,10 @@ export const decisions: Decision[] = [
     cost: "Some states exist only in code.",
   },
   {
-    title: "One cobalt accent, red only for conflicts",
+    title: "Parim's blue as the one accent, red only for conflicts",
     problem: "In a scheduling tool red has to mean one thing, or nobody notices a real conflict.",
-    options: ["A red accent", "A neutral accent", "Cobalt"],
-    choice: "Cobalt for actions, focus and selection. Red only for conflicts. Every text colour passes WCAG AA in light and dark.",
+    options: ["A red accent", "A neutral accent", "Parim's blue"],
+    choice: "Parim's sky blue for marks, and a deeper shade of it for buttons, links and focus so text still passes contrast. Red only for conflicts. Every text colour passes WCAG AA in light and dark.",
     cost: "A quieter page.",
   },
 ];
