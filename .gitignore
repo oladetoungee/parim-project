@@ -46,3 +46,4 @@ public/window.svg
 # private planning notes and agent briefs, kept local
 BUILD-SPEC.md
 .claude/
+.vscode/
