@@ -58,6 +58,8 @@ export async function call(handler: unknown, options: CallOptions) {
   const headers: Record<string, string> = { ...options.headers };
   if (options.session !== null) headers.cookie = sessionCookieHeader(options.session ?? manager);
   if (options.body !== undefined) headers["content-type"] ??= "application/json";
+  // A browser sends Origin on every write; the API refuses writes without it.
+  if ((options.method ?? "GET") !== "GET") headers.origin ??= "http://localhost";
 
   const request = new Request(`http://localhost${options.path}`, {
     method: options.method ?? "GET",

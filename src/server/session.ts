@@ -8,8 +8,12 @@
 // first page load gets a manager cookie from src/proxy.ts, so the board works
 // straight away. The cookie is SameSite=Lax, so a cross-site POST arrives
 // without it and is refused.
+//
+// The payload also carries a random `sid`. It isn't part of Session (nothing
+// is authorised by it); it only gives each browser its own rate-limit bucket,
+// since every manager session would otherwise sign to the same token.
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { HttpError } from "./http";
 
 export type Session = { role: "manager" } | { role: "worker"; staffId: number };
@@ -17,7 +21,8 @@ export type Session = { role: "manager" } | { role: "worker"; staffId: number };
 export const SESSION_COOKIE = "shiftline_session";
 /** The seeded worker the switch logs in as, unless a staffId is given. */
 export const DEMO_WORKER_EMAIL = "ana.tamm@example.com";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+/** 8 hours: a working shift. The proxy hands out a fresh one after that. */
+const MAX_AGE_SECONDS = 60 * 60 * 8;
 /** What src/proxy.ts hands out on the first page load. */
 export const DEFAULT_SESSION: Session = { role: "manager" };
 
@@ -32,28 +37,43 @@ function sign(payload: string) {
 }
 
 export function encodeSession(session: Session): string {
-  const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ ...session, sid: randomUUID() })).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }
 
-export function decodeSession(token: string): Session | null {
+/** The parsed payload if the signature checks out, otherwise null. */
+function verify(token: string): Record<string, unknown> | null {
   const [payload, signature, extra] = token.split(".");
   if (!payload || !signature || extra !== undefined) return null;
 
+  // Compare HMACs in constant time, so response timing can't reveal how many
+  // leading bytes of a forged signature were right.
   const expected = Buffer.from(sign(payload));
   const actual = Buffer.from(signature);
   if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
 
   try {
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    if (data?.role === "manager") return { role: "manager" };
-    if (data?.role === "worker" && Number.isInteger(data.staffId) && data.staffId > 0) {
-      return { role: "worker", staffId: data.staffId };
-    }
-    return null;
+    const data: unknown = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    return data && typeof data === "object" ? (data as Record<string, unknown>) : null;
   } catch {
     return null;
   }
+}
+
+export function decodeSession(token: string): Session | null {
+  const data = verify(token);
+  if (data?.role === "manager") return { role: "manager" };
+  if (data?.role === "worker" && Number.isInteger(data.staffId) && (data.staffId as number) > 0) {
+    return { role: "worker", staffId: data.staffId as number };
+  }
+  return null;
+}
+
+/** The verified cookie's `sid`, or null. Only used to key rate limits. */
+export function sessionIdOf(request: Request): string | null {
+  const token = readCookie(request, SESSION_COOKIE);
+  const sid = token === undefined ? undefined : verify(token)?.sid;
+  return typeof sid === "string" ? sid : null;
 }
 
 function readCookie(request: Request, name: string): string | undefined {

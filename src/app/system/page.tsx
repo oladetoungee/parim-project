@@ -33,11 +33,6 @@ const needed = [6, 10, 14, 18, 22, 24, 24, 24, 22, 20, 18, 16, 12, 10, 8, 4];
 const assigned = [6, 10, 14, 18, 22, 24, 24, 14, 13, 20, 18, 16, 12, 10, 8, 4];
 const hours: HourCoverage[] = needed.map((n, i) => ({ hour: 7 + i, needed: n, assigned: assigned[i] }));
 
-const themes = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-] as const;
-
 export default function SystemPage() {
   return (
     <ToastProvider>
@@ -48,16 +43,10 @@ export default function SystemPage() {
 }
 
 function Gallery() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [view, setView] = useState<"manager" | "worker">("manager");
   const [strip, setStrip] = useState(hours);
   const [shake, setShake] = useState(0);
   const { toast } = useToast();
-
-  function changeTheme(next: "light" | "dark") {
-    setTheme(next);
-    document.documentElement.dataset.theme = next;
-  }
 
   return (
     <main className="mx-auto flex w-full max-w-[1120px] flex-col px-4 py-12 sm:px-8">
@@ -71,7 +60,6 @@ function Gallery() {
             Every component in every state, for review. Built from the tokens in tokens/tokens.json.
           </p>
         </div>
-        <SegmentedControl aria-label="Theme" options={themes} value={theme} onValueChange={changeTheme} />
       </header>
 
       <Section title="Button" note="Primary, secondary, ghost. Sizes sm and md. Red is kept for conflicts, so there is no red button.">

@@ -12,7 +12,8 @@ export const GET = route(async (request) => {
 
 /**
  * Switches role. Sets the signed cookie that every other route reads. Needs no
- * existing session; the JSON content type keeps a cross-site form from calling it.
+ * existing session; the Origin check and JSON content type keep a cross-site
+ * form from calling it. Rate limited per IP, since each call mints a session.
  */
 export const POST = route(async (request) => {
   const body = parseWith(sessionBodySchema, (await readJsonBody(request)).value);
@@ -27,4 +28,4 @@ export const POST = route(async (request) => {
   }
 
   return json({ session, staff: person }, 200, { "Set-Cookie": sessionSetCookie(session) });
-});
+}, { limit: "session" });

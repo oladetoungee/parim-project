@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   check:
-    name: Typecheck, lint, unit and component tests
+    name: Audit, typecheck, lint, unit and component tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +21,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Fails on high or critical advisories. The one moderate today is esbuild's
+      # dev server, pulled in by drizzle-kit, which never serves anything here.
+      - run: pnpm audit --audit-level=high
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test

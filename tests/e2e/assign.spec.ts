@@ -1,13 +1,8 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { checkAssignment } from "@/lib/rules";
 import type { Board, StaffListItem } from "@/server/db/queries";
+import { signInAs } from "./helpers";
 
-async function signInAs(page: Page, role: "manager" | "worker") {
-  // The first page load gets a session cookie from src/proxy.ts; this picks the role.
-  await page.goto("/");
-  const response = await page.request.post("/api/session", { data: { role } });
-  expect(response.ok()).toBe(true);
-}
 
 test("a manager assigns someone by keyboard, sees the count go up, then undoes it", async ({ page }) => {
   await signInAs(page, "manager");

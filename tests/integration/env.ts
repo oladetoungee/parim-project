@@ -13,4 +13,6 @@ if (!databaseName.includes("test")) {
 }
 
 process.env.DATABASE_URL = testUrl;
+// Every test file shares one IP and many sessions; security.int.test.ts turns it back on with tiny limits.
+process.env.RATE_LIMIT = "off";
 export const TEST_DATABASE_URL = testUrl;

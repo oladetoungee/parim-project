@@ -36,6 +36,8 @@ export default defineConfig({
         env: {
           DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
           DEMO_FLAGS: "1",
+          // Every spec signs in from the same IP; the limits have their own integration tests.
+          RATE_LIMIT: "off",
         },
       },
 });
