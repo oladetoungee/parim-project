@@ -10,7 +10,7 @@ const hasVideo = existsSync(path.join(process.cwd(), "public", VIDEO));
 
 const starts = [
   { href: "/board", title: "Board", text: "Staff the race day yourself." },
-  { href: "/system", title: "System", text: "Every component, in every state." },
+  { href: "/system", title: "System", text: "All the components in every state." },
   { href: "/decisions", title: "Decisions", text: "Decisions made, trade-offs and costs." },
   { href: FIGMA_URL, title: "Figma", text: "The design system and the board." },
 ];
