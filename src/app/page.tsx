@@ -58,7 +58,7 @@ export default function Home() {
         {hasVideo ? (
           <section aria-labelledby="film-heading" className="mt-16">
             <h2 id="film-heading" className="text-14 font-medium text-muted">
-              The whole thing in 90 seconds (with jazz in the background, because I love jazz)
+              The whole thing in 100 seconds (with jazz in the background, because I love jazz)
             </h2>
             <video
               className="mt-3 w-full rounded-8 border border-hairline bg-paper"
