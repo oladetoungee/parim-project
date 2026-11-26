@@ -1,6 +1,6 @@
 import type { SVGProps } from "react";
 
-/* Functional icons only: close, chevrons, plus, more, sun, moon. 16px, 1.5 stroke. */
+/* Functional icons only: close, check, chevrons, plus, more, sun, moon. 16px, 1.5 stroke. */
 
 type IconProps = SVGProps<SVGSVGElement>;
 
@@ -28,6 +28,14 @@ export function CloseIcon(props: IconProps) {
   return (
     <Base {...props}>
       <path d="M4 4l8 8M12 4l-8 8" />
+    </Base>
+  );
+}
+
+export function CheckIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M3.5 8.5l3 3 6-7" />
     </Base>
   );
 }

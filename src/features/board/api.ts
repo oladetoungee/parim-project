@@ -82,8 +82,9 @@ export const boardKey = ["board", EVENT_ID] as const;
 export const staffKey = (q: string) => ["staff", EVENT_ID, q] as const;
 export const activityKey = (shiftId: number) => ["activity", EVENT_ID, shiftId] as const;
 
-export function fetchBoard({ fail = false }: { fail?: boolean } = {}) {
-  return call<Board>(`/api/events/${EVENT_ID}/board${fail ? "?fail=1" : ""}`);
+/** The board read takes the same demo flags as the writes: ?fail=1 for "Error loading", ?latency=2000 for a slow network. */
+export function fetchBoard(flags: WriteFlags = {}) {
+  return call<Board>(withFlags(`/api/events/${EVENT_ID}/board`, flags));
 }
 
 export function fetchStaff(q: string) {

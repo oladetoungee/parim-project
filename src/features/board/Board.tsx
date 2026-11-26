@@ -20,7 +20,7 @@ import { StaffRow } from "@/components/ui/StaffRow";
 import { useToast } from "@/components/ui/Toast";
 import { blocks, checkAssignment, type BookedShift } from "@/lib/rules";
 import type { Board, BoardShift, StaffListItem } from "@/server/db/queries";
-import { DemoStatesMenu, RoleSwitch } from "./BoardControls";
+import { DemoStateNote, DemoStatesMenu, RoleSwitch } from "./BoardControls";
 import { BoardFilters, CoverageSection, CoverageSummary, EventHeader, noFilters, type Filters } from "./BoardHeader";
 import { BoardSkeleton } from "./BoardSkeleton";
 import { capitalise, emptyFilterTitle, hourOf, overlapsHour, packLanes, shiftSpan } from "./board-math";
@@ -416,6 +416,7 @@ export function BoardScreen() {
     const main = (
       <main className="flex min-w-0 flex-1 flex-col gap-8 px-4 py-6 md:px-8 md:py-8">
         <EventHeader board={board} staffCount={staffCount} />
+        <DemoStateNote />
         {refreshFailed}
         {isMobile ? (
           <CoverageSummary board={board} />
