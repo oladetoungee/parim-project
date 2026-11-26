@@ -13,6 +13,7 @@ import { DemoStateProvider } from "@/features/board/demo-state";
 import { useBoard } from "@/features/board/queries";
 import { ThemeToggle } from "@/features/shell/ThemeToggle";
 import { cn } from "@/lib/cn";
+import { useAppBase } from "./app-base";
 
 /**
  * The second layout, for comparing with /board. One query client for the
@@ -20,6 +21,18 @@ import { cn } from "@/lib/cn";
  * the board, and the demo state carries across.
  */
 export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <AppProviders>
+      <div className="flex min-h-full flex-1 flex-col">
+        <AppBar />
+        {children}
+      </div>
+    </AppProviders>
+  );
+}
+
+/** The query client, toasts and demo state both app layouts need. */
+export function AppProviders({ children }: { children: ReactNode }) {
   const [client] = useState(
     () =>
       new QueryClient({
@@ -32,12 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <DemoStateProvider>
-          <div className="flex min-h-full flex-1 flex-col">
-            <AppBar />
-            {children}
-          </div>
-        </DemoStateProvider>
+        <DemoStateProvider>{children}</DemoStateProvider>
       </ToastProvider>
     </QueryClientProvider>
   );
@@ -45,21 +53,27 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 type NavLink = { href: string; label: string; count?: number; managerOnly?: boolean };
 
-function AppBar() {
+export function AppBar({ className }: { className?: string }) {
   const pathname = usePathname();
+  const base = useAppBase();
   const board = useBoard().data;
   const role = board?.viewer.role;
   const manager = role !== "worker";
   const waiting = board ? board.shifts.reduce((n, s) => n + s.requests.length, 0) : undefined;
 
   const links: NavLink[] = [
-    { href: "/v2/schedule", label: manager ? "Schedule" : "My shifts" },
-    { href: "/v2/people", label: "People", managerOnly: true },
-    { href: "/v2/requests", label: "Requests", count: waiting, managerOnly: true },
+    { href: `${base}/schedule`, label: manager ? "Schedule" : "My shifts" },
+    { href: `${base}/people`, label: "People", managerOnly: true },
+    { href: `${base}/requests`, label: "Requests", count: waiting, managerOnly: true },
   ];
 
   return (
-    <header className="flex shrink-0 flex-wrap items-center border-b border-hairline bg-canvas px-4 sm:h-14 sm:flex-nowrap sm:gap-8 md:px-8">
+    <header
+      className={cn(
+        "flex shrink-0 flex-wrap items-center border-b border-hairline bg-canvas px-4 sm:h-14 sm:flex-nowrap sm:gap-8 md:px-8",
+        className,
+      )}
+    >
       <Link
         href="/"
         className="inline-flex h-14 items-center font-display text-20 leading-7 tracking-[-0.02em] text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

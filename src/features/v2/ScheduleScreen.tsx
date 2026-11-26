@@ -48,6 +48,7 @@ import { cn } from "@/lib/cn";
 import { useBoardWrites, type OverrideRequest } from "@/features/board/useBoardWrites";
 import { WorkerPanel, workerIdentity } from "@/features/board/WorkerPanel";
 import { CoverageRow, matchesSchedule, noMatchTitle, noScheduleFilters, ScheduleToolbar, StatusBar, type ScheduleFilters } from "./ScheduleBars";
+import { useAppBase } from "./app-base";
 
 /** How long a blocked card keeps its red outline after the shake. */
 const CONFLICT_MS = 2400;
@@ -323,6 +324,7 @@ export function ScheduleScreen() {
   // People and Requests link here with ?shift=12 to open that shift. Next keeps
   // this page's state between visits, so the param is read on every change.
   const router = useRouter();
+  const base = useAppBase();
   const params = useSearchParams();
   const shiftParam = Number(params.get("shift")) || null;
   const [handledParam, setHandledParam] = useState<number | null>(null);
@@ -484,7 +486,7 @@ export function ScheduleScreen() {
           onClose={() => {
             focusShift(openShiftId);
             setOpenShiftId(null);
-            if (shiftParam !== null) router.replace("/v2/schedule", { scroll: false });
+            if (shiftParam !== null) router.replace(`${base}/schedule`, { scroll: false });
           }}
           onRemove={writes.remove}
           onApprove={writes.approve}

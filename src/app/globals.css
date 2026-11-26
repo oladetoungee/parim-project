@@ -446,3 +446,75 @@
     line-height: 1rem;
   }
 }
+
+/*
+ * /v3: a covered card already reads as covered from its green dot, full
+ * baseline and "3 of 3", so the word goes. font-size 0 hides the text but
+ * keeps it for screen readers; the dot is sized in rem, so it stays.
+ */
+[data-quiet-covered] .shift-card [data-status="covered"] {
+  font-size: 0;
+  gap: 0;
+}
+
+/* ---------- Story page (/v3). Plays once on load; transform and opacity only. ---------- */
+
+@keyframes story-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@keyframes story-device-in {
+  from {
+    opacity: 0;
+    transform: translateY(80px) scale(0.96);
+  }
+}
+
+@keyframes story-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+@keyframes story-cue {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(250%);
+  }
+}
+
+.story-rise {
+  animation: story-rise 700ms var(--easing-enter) both;
+}
+
+.story-device-in {
+  animation: story-device-in 1100ms var(--easing-enter) both;
+}
+
+.story-pop {
+  animation: story-pop 420ms var(--easing-spring) both;
+}
+
+.story-cue {
+  animation: story-cue 1600ms var(--easing-standard) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-rise,
+  .story-device-in,
+  .story-pop,
+  .story-cue {
+    animation: none;
+  }
+
+  .story,
+  .story * {
+    transition-duration: 0ms !important;
+  }
+}

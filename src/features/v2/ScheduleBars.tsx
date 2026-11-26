@@ -9,6 +9,7 @@ import { HeavyLight } from "@/features/board/BoardHeader";
 import { GUTTER_WIDTH } from "@/features/board/Timeline";
 import { cn } from "@/lib/cn";
 import type { Board, BoardShift } from "@/server/db/queries";
+import { useAppBase } from "./app-base";
 
 export type StatusFilter = "all" | "open" | "short" | "covered";
 
@@ -149,6 +150,7 @@ export function StatusBar({
   ];
   const places = board.shifts.reduce((n, s) => n + Math.max(0, s.slots - s.filled), 0);
   const waiting = board.shifts.reduce((n, s) => n + s.requests.length, 0);
+  const base = useAppBase();
 
   return (
     <div className="sticky bottom-0 z-10 -mx-4 mt-auto flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-hairline bg-canvas px-4 py-2 md:-mx-8 md:px-8">
@@ -181,7 +183,7 @@ export function StatusBar({
       </p>
       {board.viewer.role === "manager" ? (
         <Link
-          href="/v2/requests"
+          href={`${base}/requests`}
           className={cn(
             "ml-auto text-14 tabular underline-offset-4 hover:underline",
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",

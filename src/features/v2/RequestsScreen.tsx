@@ -15,6 +15,7 @@ import { useBoard, useStaff } from "@/features/board/queries";
 import { useBoardWrites, type OverrideRequest } from "@/features/board/useBoardWrites";
 import type { BoardShift, StaffListItem } from "@/server/db/queries";
 import { ManagerOnly, PageHeader } from "./PageParts";
+import { useAppBase } from "./app-base";
 
 type Row = { shift: BoardShift; request: BoardShift["requests"][number]; breaks: RuleBreak[] };
 
@@ -29,6 +30,7 @@ export function RequestsScreen() {
   const manager = board?.viewer.role === "manager";
   const staff = useStaff("", manager);
   const [override, setOverride] = useState<OverrideRequest | null>(null);
+  const base = useAppBase();
 
   const writes = useBoardWrites({
     onNeedsOverride: setOverride,
@@ -55,7 +57,11 @@ export function RequestsScreen() {
     if (boardQuery.isError) {
       return (
         <Page>
-          <ErrorState title="Couldn't load the requests" description={boardQuery.error?.message} onRetry={() => void boardQuery.refetch()} />
+          <ErrorState
+            title="Couldn't load the requests"
+            description={boardQuery.error?.message}
+            onRetry={() => void boardQuery.refetch()}
+          />
         </Page>
       );
     }
@@ -85,7 +91,7 @@ export function RequestsScreen() {
           title="No requests waiting"
           description="When a worker asks for an open shift it shows up here. Switch to Worker in the app bar to send one."
           actions={
-            <Link href="/v2/schedule" className="text-14 font-medium text-ink underline underline-offset-4">
+            <Link href={`${base}/schedule`} className="text-14 font-medium text-ink underline underline-offset-4">
               Back to the schedule
             </Link>
           }
@@ -106,22 +112,22 @@ export function RequestsScreen() {
             return (
               <li key={request.requestId} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-hairline py-3">
                 <Avatar name={request.name} />
-                <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex min-w-0 flex-1 basis-[calc(100%-3rem)] flex-col sm:basis-0">
                   <span className="text-14 font-medium text-ink">{request.name}</span>
                   <span className="text-14 text-muted tabular">
                     {capitalise(shift.roleName)} at {shift.locationName}, {shift.startTime} to {shift.endTime}
                   </span>
                   {note ? (
-                    <span className={blocked[0] || full ? "text-12 text-conflict" : "text-12 text-ink"}>{note}</span>
+                    <span className={blocked[0] || full ? "text-14 text-conflict" : "text-14 text-muted"}>{note}</span>
                   ) : null}
                 </div>
-                <span className="flex items-center gap-2 text-14 text-muted tabular">
+                <span className="flex items-center gap-2 pl-11 text-14 text-muted tabular sm:pl-0">
                   {shift.filled} of {shift.slots}
                   <Badge status={shift.status} />
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="ml-auto flex items-center gap-2">
                   <Link
-                    href={`/v2/schedule?shift=${shift.id}`}
+                    href={`${base}/schedule?shift=${shift.id}`}
                     className="inline-flex h-8 items-center px-2 text-14 text-muted underline-offset-4 hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
                     View shift
@@ -146,5 +152,5 @@ export function RequestsScreen() {
 }
 
 function Page({ children }: { children: ReactNode }) {
-  return <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">{children}</main>;
+  return <main className="flex w-full max-w-[1080px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">{children}</main>;
 }

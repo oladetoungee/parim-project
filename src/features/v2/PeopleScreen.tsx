@@ -15,6 +15,7 @@ import { rowLicence } from "@/features/board/StaffPanel";
 import { cn } from "@/lib/cn";
 import type { Board, BoardShift, StaffListItem } from "@/server/db/queries";
 import { ManagerOnly, PageHeader } from "./PageParts";
+import { useAppBase } from "./app-base";
 
 /** Within this many hours of their weekly limit counts as close to it. */
 const NEAR_LIMIT_HOURS = 8;
@@ -112,10 +113,7 @@ export function PeopleScreen() {
 
   return (
     <Page>
-      <PageHeader
-        title="People"
-        line={`${everyone.length} people, ${onShift} on a shift on ${longDate(board.date)}.`}
-      />
+      <PageHeader title="People" line={`${everyone.length} people, ${onShift} on a shift on ${longDate(board.date)}.`} />
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <label htmlFor={searchId} className="sr-only">
@@ -125,7 +123,7 @@ export function PeopleScreen() {
           id={searchId}
           type="search"
           placeholder="Search by name"
-          className="h-8 w-56"
+          className="h-8 w-full sm:w-56"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -145,70 +143,114 @@ export function PeopleScreen() {
             </option>
           ))}
         </Select>
-        <SegmentedControl aria-label="Show" size="sm" options={views} value={view} onValueChange={setView} />
+        <div className="-mx-4 max-w-[100vw] overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <SegmentedControl aria-label="Show" size="sm" options={views} value={view} onValueChange={setView} />
+        </div>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState title="Nobody matches" description="Try another name, role or view." />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-left">
-            <thead>
-              <tr className="border-b border-hairline text-12 text-muted">
-                <th scope="col" className="py-2 pr-4 font-normal">
-                  Name
-                </th>
-                <th scope="col" className="py-2 pr-4 font-normal">
-                  Role
-                </th>
-                <th scope="col" className="py-2 pr-4 font-normal">
-                  SIA licence
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-normal">
-                  Hours this week
-                </th>
-                <th scope="col" className="py-2 font-normal">
-                  On the day
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((p) => {
-                const licence = licenceText(p, board.date);
-                const shifts = dayShifts.get(p.id) ?? [];
-                return (
-                  <tr key={p.id} className="border-b border-hairline hover:bg-hover">
-                    <th scope="row" className="py-2 pr-4 font-normal">
-                      <button
-                        type="button"
-                        onClick={() => setOpenId(p.id)}
-                        className="flex items-center gap-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        <>
+          {/* On a phone each person is two lines instead of a five-column table. */}
+          <ul className="flex flex-col border-t border-hairline sm:hidden">
+            {rows.map((p) => {
+              const licence = licenceText(p, board.date);
+              const shifts = dayShifts.get(p.id) ?? [];
+              return (
+                <li key={p.id} className="border-b border-hairline">
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(p.id)}
+                    className="flex w-full items-center gap-3 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    <Avatar name={p.name} decorative />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="text-14 font-medium text-ink">
+                        {p.name} <span className="font-normal text-muted">{capitalise(p.roleName)}</span>
+                      </span>
+                      <span className="text-12 text-muted tabular">
+                        {p.hoursThisWeek} of {p.weeklyHourLimit} h,{" "}
+                        {shifts.length === 0 ? "free" : shifts.map((s) => `${s.locationName} ${s.startTime}`).join(", ")}
+                        {licence.problem ? <span className="text-conflict">, SIA {licence.text.toLowerCase()}</span> : null}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hidden overflow-x-auto sm:block">
+            <table className="w-full min-w-[720px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-hairline text-12 text-muted">
+                  <th scope="col" className="py-2 pr-4 font-normal">
+                    Name
+                  </th>
+                  <th scope="col" className="py-2 pr-4 font-normal">
+                    Role
+                  </th>
+                  <th scope="col" className="py-2 pr-4 font-normal">
+                    SIA licence
+                  </th>
+                  <th scope="col" className="py-2 pr-4 text-right font-normal">
+                    Hours this week
+                  </th>
+                  <th scope="col" className="py-2 font-normal">
+                    On the day
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((p) => {
+                  const licence = licenceText(p, board.date);
+                  const shifts = dayShifts.get(p.id) ?? [];
+                  return (
+                    <tr key={p.id} className="border-b border-hairline hover:bg-hover">
+                      <th scope="row" className="py-2 pr-4 font-normal">
+                        <button
+                          type="button"
+                          onClick={() => setOpenId(p.id)}
+                          className="flex items-center gap-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                          <Avatar name={p.name} decorative />
+                          <span className="text-14 font-medium text-ink">{p.name}</span>
+                        </button>
+                      </th>
+                      <td className="py-2 pr-4 text-14 text-ink">{capitalise(p.roleName)}</td>
+                      <td className={cn("py-2 pr-4 text-14", licence.problem ? "text-conflict" : "text-muted")}>
+                        {licence.text}
+                      </td>
+                      <td
+                        className={cn(
+                          "py-2 pr-4 text-right text-14 tabular",
+                          nearLimit(p) ? "font-medium text-ink" : "text-muted",
+                        )}
                       >
-                        <Avatar name={p.name} decorative />
-                        <span className="text-14 font-medium text-ink">{p.name}</span>
-                      </button>
-                    </th>
-                    <td className="py-2 pr-4 text-14 text-ink">{capitalise(p.roleName)}</td>
-                    <td className={cn("py-2 pr-4 text-14", licence.problem ? "text-conflict" : "text-muted")}>{licence.text}</td>
-                    <td className={cn("py-2 pr-4 text-right text-14 tabular", nearLimit(p) ? "font-medium text-ink" : "text-muted")}>
-                      {p.hoursThisWeek} of {p.weeklyHourLimit}
-                    </td>
-                    <td className="py-2 text-14 text-ink tabular">
-                      {shifts.length === 0 ? (
-                        <span className="text-muted">Free</span>
-                      ) : (
-                        shifts.map((s) => `${s.locationName} ${s.startTime}`).join(", ")
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                        {p.hoursThisWeek} of {p.weeklyHourLimit}
+                      </td>
+                      <td className="py-2 text-14 text-ink tabular">
+                        {shifts.length === 0 ? (
+                          <span className="text-muted">Free</span>
+                        ) : (
+                          shifts.map((s) => `${s.locationName} ${s.startTime}`).join(", ")
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
-      <PersonDrawer board={board} person={open} shifts={open ? (dayShifts.get(open.id) ?? []) : []} onClose={() => setOpenId(null)} />
+      <PersonDrawer
+        board={board}
+        person={open}
+        shifts={open ? (dayShifts.get(open.id) ?? []) : []}
+        onClose={() => setOpenId(null)}
+      />
     </Page>
   );
 }
@@ -224,6 +266,7 @@ function PersonDrawer({
   shifts: BoardShift[];
   onClose: () => void;
 }) {
+  const base = useAppBase();
   return (
     <Drawer open={person !== null} onOpenChange={(o) => !o && onClose()}>
       {person ? (
@@ -235,7 +278,9 @@ function PersonDrawer({
               </Fact>
               <Fact label="SIA licence">
                 {licenceText(person, board.date).text}
-                {person.licence.expiresOn ? <span className="block text-12 text-muted">Until {longDate(person.licence.expiresOn)}</span> : null}
+                {person.licence.expiresOn ? (
+                  <span className="block text-12 text-muted">Until {longDate(person.licence.expiresOn)}</span>
+                ) : null}
               </Fact>
             </dl>
             <section className="flex flex-col gap-3">
@@ -250,7 +295,7 @@ function PersonDrawer({
                         {capitalise(s.roleName)} at {s.locationName}, {s.startTime} to {s.endTime}
                       </span>
                       <Link
-                        href={`/v2/schedule?shift=${s.id}`}
+                        href={`${base}/schedule?shift=${s.id}`}
                         className="shrink-0 text-14 text-muted underline-offset-4 hover:text-ink hover:underline"
                       >
                         View shift
@@ -260,10 +305,7 @@ function PersonDrawer({
                 </ul>
               )}
             </section>
-            <Link
-              href="/v2/schedule"
-              className="self-start text-14 font-medium text-ink underline underline-offset-4"
-            >
+            <Link href={`${base}/schedule`} className="self-start text-14 font-medium text-ink underline underline-offset-4">
               Open the schedule
             </Link>
           </div>
@@ -283,5 +325,5 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function Page({ children }: { children: ReactNode }) {
-  return <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">{children}</main>;
+  return <main className="flex w-full max-w-[1080px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">{children}</main>;
 }

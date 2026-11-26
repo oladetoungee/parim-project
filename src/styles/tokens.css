@@ -7,7 +7,9 @@
  * AA needs 4.5 for text, 3.0 for UI boundaries and graphics.
  */
 
-:root {
+/* [data-theme="light"] lets a part of a dark page stay light (the story page devices). */
+:root,
+[data-theme="light"] {
   color-scheme: light;
 
   /* Primitives: neutrals */
