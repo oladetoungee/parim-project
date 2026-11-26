@@ -42,3 +42,7 @@ public/window.svg
 
 # screen recordings
 *.mov
+
+# private planning notes and agent briefs, kept local
+BUILD-SPEC.md
+.claude/

@@ -286,7 +286,7 @@ describe("POST /api/session", () => {
     expect(res.body.staff.name).toBe("Ana Tamm");
 
     const setCookie = res.headers.get("set-cookie")!;
-    expect(setCookie).toMatch(/^shiftline_session=[^;]+; Path=\/; HttpOnly; SameSite=Lax/);
+    expect(setCookie).toMatch(/^parimshift_session=[^;]+; Path=\/; HttpOnly; SameSite=Lax/);
     const cookie = setCookie.split(";")[0];
 
     const me = await call(getSession, { path: "/api/session", session: null, headers: { cookie } });

@@ -109,7 +109,7 @@ describe("POST /api/assignments", () => {
   });
 
   it("returns 401 for a tampered cookie", async () => {
-    const res = await call(assign, { method: "POST", path: "/api/assignments", body: {}, session: null, headers: { cookie: "shiftline_session=eyJyb2xlIjoibWFuYWdlciJ9.forged" } });
+    const res = await call(assign, { method: "POST", path: "/api/assignments", body: {}, session: null, headers: { cookie: "parimshift_session=eyJyb2xlIjoibWFuYWdlciJ9.forged" } });
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe("invalid_session");
   });

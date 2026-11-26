@@ -1,4 +1,4 @@
-// The assign transaction. See BUILD-SPEC.md section 4, "Assigning under concurrency".
+// The assign transaction: lock the shift, then the person, check the rules, then write.
 
 import { and, count, desc, eq, gte, lte, ne } from "drizzle-orm";
 import { blocks, checkAssignment, type RuleBreak, type RuleInput, warnings } from "@/lib/rules";

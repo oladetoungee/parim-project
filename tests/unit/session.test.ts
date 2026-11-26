@@ -29,11 +29,11 @@ describe("session cookie", () => {
 
   it("refuses a request with no cookie, and a bad cookie, with 401", () => {
     expect(() => getSession(requestWith())).toThrowError(expect.objectContaining({ status: 401, code: "no_session" }));
-    expect(() => getSession(requestWith("shiftline_session=nope"))).toThrowError(expect.objectContaining({ status: 401, code: "invalid_session" }));
+    expect(() => getSession(requestWith("parimshift_session=nope"))).toThrowError(expect.objectContaining({ status: 401, code: "invalid_session" }));
   });
 
   it("gives workers 403 on manager routes", () => {
-    const cookie = `shiftline_session=${encodeSession({ role: "worker", staffId: 3 })}`;
+    const cookie = `parimshift_session=${encodeSession({ role: "worker", staffId: 3 })}`;
     expect(() => requireManager(requestWith(cookie))).toThrowError(expect.objectContaining({ status: 403, code: "forbidden" }));
   });
 
@@ -43,12 +43,12 @@ describe("session cookie", () => {
   });
 
   it("gives each session its own id for rate limiting, and only trusts a signed one", () => {
-    const a = sessionIdOf(requestWith(`shiftline_session=${encodeSession({ role: "manager" })}`));
-    const b = sessionIdOf(requestWith(`shiftline_session=${encodeSession({ role: "manager" })}`));
+    const a = sessionIdOf(requestWith(`parimshift_session=${encodeSession({ role: "manager" })}`));
+    const b = sessionIdOf(requestWith(`parimshift_session=${encodeSession({ role: "manager" })}`));
     expect(a).toMatch(/^[0-9a-f-]{36}$/);
     expect(a).not.toBe(b);
 
     const forged = Buffer.from(JSON.stringify({ role: "manager", sid: "chosen" })).toString("base64url");
-    expect(sessionIdOf(requestWith(`shiftline_session=${forged}.bad`))).toBeNull();
+    expect(sessionIdOf(requestWith(`parimshift_session=${forged}.bad`))).toBeNull();
   });
 });

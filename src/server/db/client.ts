@@ -9,7 +9,7 @@ type Cached = { pool: mysql.Pool; db: Db };
 
 // Next.js dev reloads modules on every change. Keeping the pool on globalThis
 // stops each reload from opening a new set of connections.
-const globalForDb = globalThis as unknown as { shiftlineDb?: Cached };
+const globalForDb = globalThis as unknown as { parimshiftDb?: Cached };
 
 // How long a statement waits for a row lock before failing (MySQL's default is 50s).
 // Kept well under the 60s idempotency claim, so a request stuck behind a lock
@@ -63,18 +63,18 @@ function retrySelectsOnDroppedConnection(pool: mysql.Pool): mysql.Pool {
 }
 
 export function getDb(): Db {
-  if (!globalForDb.shiftlineDb) {
+  if (!globalForDb.parimshiftDb) {
     const url = process.env.DATABASE_URL;
     if (!url) throw new Error("DATABASE_URL is not set");
     const pool = createPool(url);
-    globalForDb.shiftlineDb = { pool, db: drizzle({ client: pool, schema, mode: "default" }) };
+    globalForDb.parimshiftDb = { pool, db: drizzle({ client: pool, schema, mode: "default" }) };
   }
-  return globalForDb.shiftlineDb.db;
+  return globalForDb.parimshiftDb.db;
 }
 
 export async function closeDb() {
-  const cached = globalForDb.shiftlineDb;
-  globalForDb.shiftlineDb = undefined;
+  const cached = globalForDb.parimshiftDb;
+  globalForDb.parimshiftDb = undefined;
   await cached?.pool.end();
 }
 

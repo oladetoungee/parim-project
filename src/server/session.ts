@@ -18,7 +18,7 @@ import { HttpError } from "./http";
 
 export type Session = { role: "manager" } | { role: "worker"; staffId: number };
 
-export const SESSION_COOKIE = "shiftline_session";
+export const SESSION_COOKIE = "parimshift_session";
 /** The seeded worker the switch logs in as, unless a staffId is given. */
 export const DEMO_WORKER_EMAIL = "ana.tamm@example.com";
 /** 8 hours: a working shift. The proxy hands out a fresh one after that. */
