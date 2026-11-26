@@ -18,6 +18,24 @@ const starts = [
 const linkStyle =
   "underline decoration-hairline underline-offset-4 hover:text-accent hover:decoration-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
+/** Marks the product name like a highlighter stroke. */
+function highlightName(text: string) {
+  const parts = text.split("ParimShift");
+  return parts.flatMap((part, i) =>
+    i === 0
+      ? [part]
+      : [
+          <mark
+            key={i}
+            className="rounded-2 bg-accent px-1.5 py-0.5 font-semibold text-accent-on [box-decoration-break:clone]"
+          >
+            ParimShift
+          </mark>,
+          part,
+        ],
+  );
+}
+
 function isExternal(href: string) {
   return href.startsWith("http");
 }
@@ -46,7 +64,7 @@ export default function Home() {
           </h1>
           <div className="mt-8 space-y-4 text-16 text-ink md:text-20 md:leading-8">
             {intro.map((p) => (
-              <p key={p}>{p}</p>
+              <p key={p}>{highlightName(p)}</p>
             ))}
           </div>
         </header>
