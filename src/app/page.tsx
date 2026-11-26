@@ -54,7 +54,7 @@ export default function Home() {
         {hasVideo ? (
           <section aria-labelledby="film-heading" className="mt-10">
             <h2 id="film-heading" className="text-14 font-medium text-muted">
-              A 100 second demo, with jazz in the background because I like jazz 🎷
+              A two minute demo, with jazz in the background because I like jazz 🎷
             </h2>
             <video
               className="mt-3 w-full rounded-8 border border-hairline bg-paper"
